@@ -6,6 +6,11 @@ import eu.ehri.project.models.annotations.Mandatory;
 
 public interface NamedEntity extends Frame {
 
+    /**
+     * Fetch the name for this item.
+     *
+     * @return a name string
+     */
     @Mandatory
     @Property(Ontology.NAME_KEY)
     public String getName();

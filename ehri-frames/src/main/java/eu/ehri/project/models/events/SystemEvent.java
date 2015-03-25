@@ -31,6 +31,11 @@ import eu.ehri.project.models.utils.JavaHandlerUtils;
 @EntityType(EntityClass.SYSTEM_EVENT)
 public interface SystemEvent extends AccessibleEntity {
 
+    /**
+     * The number of subjects to which this event applies.
+     *
+     * @return an number
+     */
     @Meta(ItemHolder.CHILD_COUNT)
     @JavaHandler
     public long subjectCount();

@@ -13,6 +13,11 @@ import eu.ehri.project.models.annotations.Mandatory;
  */
 public interface IdentifiableEntity extends Frame {
 
+    /**
+     * Fetch the identifier for this item
+     *
+     * @return an identifier string
+     */
     @Mandatory
     @Property(Ontology.IDENTIFIER_KEY)
     public String getIdentifier();

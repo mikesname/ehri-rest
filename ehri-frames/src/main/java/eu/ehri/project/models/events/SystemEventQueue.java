@@ -14,12 +14,22 @@ import eu.ehri.project.models.utils.JavaHandlerUtils;
  * Class representing the system event queue node, of which
  * there Will Be Only One.
  *
+ * The head of the event queue is a sort of anchor to the
+ * most recent event, which attach to it as a newest-first
+ * linked list.
+ *
+ * @author Mike Bryant (http://github.com/mikesname)
  */
 @EntityType(EntityClass.SYSTEM)
 public interface SystemEventQueue extends Frame {
 
     public static final String STREAM_START = Ontology.ACTIONER_HAS_LIFECYCLE_ACTION + "Stream";
 
+    /**
+     * An iterable of all events in the system.
+     *
+     * @return an iterable of system event frames
+     */
     @JavaHandler
     public Iterable<SystemEvent> getSystemEvents();
 

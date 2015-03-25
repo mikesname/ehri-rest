@@ -11,6 +11,11 @@ import eu.ehri.project.models.annotations.Fetch;
  */
 public interface AddressableEntity {
 
+    /**
+     * Fetch all addresses belonging to this item.
+     *
+     * @return an iterable of address frames
+     */
     @Dependent
     @Fetch(value = Ontology.ENTITY_HAS_ADDRESS, whenNotLite = true)
     @Adjacency(label = Ontology.ENTITY_HAS_ADDRESS)

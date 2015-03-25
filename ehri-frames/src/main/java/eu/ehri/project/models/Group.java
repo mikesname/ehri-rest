@@ -45,7 +45,7 @@ public interface Group extends Accessor, AccessibleEntity, IdentifiableEntity,
     public Iterable<Group> getGroups();
 
     /**
-     * TODO FIXME use this in case we need AccesibleEnity's instead of Accessors, 
+     * TODO FIXME use this in case we need AccessibleEntity's instead of Accessors,
      */
     @Adjacency(label = Ontology.ACCESSOR_BELONGS_TO_GROUP, direction = Direction.IN)
     public Iterable<AccessibleEntity> getMembersAsEntities();

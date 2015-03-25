@@ -22,22 +22,46 @@ public interface AccessibleEntity extends PermissionGrantTarget, VersionedEntity
     public Iterable<Accessor> getAccessors();
 
     /**
-     * only Accessor accessor can access this AccessibleEntity.
-     * This is NOT the way to add an Accessor to a Group, use Group.addMember()
-     * @param accessor 
+     * Add an accessor who can access this item. (If there are no
+     * accessors the item is globally visible.)
+     *
+     * NB: This is NOT how to add an item to a group.
+     *
+     * @param accessor an accessor frame
      */
     @JavaHandler
     public void addAccessor(final Accessor accessor);
 
+    /**
+     * Stop an accessor from being able to access this item.
+     *
+     * @param accessor an accessor frame
+     */
     @Adjacency(label = Ontology.IS_ACCESSIBLE_TO)
     public void removeAccessor(final Accessor accessor);
 
+    /**
+     * The permission scope to which this item belongs.
+     *
+     * @return a permission scope frame (or null)
+     */
     @Adjacency(label = Ontology.HAS_PERMISSION_SCOPE)
     public PermissionScope getPermissionScope();
 
+    /**
+     * Set the permission scope to which this item belongs.
+     *
+     * @param scope a permission scope frame
+     */
     @JavaHandler
     public void setPermissionScope(final PermissionScope scope);
 
+    /**
+     * Get all permission scopes to which this item belongs,
+     * e.g. immediate parent and all subsequent ancestors.
+     *
+     * @return an iterable of permission scope frames
+     */
     @JavaHandler
     public Iterable<PermissionScope> getPermissionScopes();
 
@@ -49,10 +73,21 @@ public interface AccessibleEntity extends PermissionGrantTarget, VersionedEntity
     @JavaHandler
     public Iterable<SystemEvent> getHistory();
 
+    /**
+     * Get the latest event applying to this item.
+     *
+     * @return a system event frame, or null
+     */
     @Fetch(value = Ontology.ENTITY_HAS_LIFECYCLE_EVENT, ifLevel = 0)
     @JavaHandler
     public SystemEvent getLatestEvent();
 
+    /**
+     * Determine if this item is restricted, e.g. if it is limited
+     * to one or more accessors.
+     *
+     * @return whether or not the item is restricted
+     */
     @JavaHandler
     boolean hasAccessRestriction();
 
