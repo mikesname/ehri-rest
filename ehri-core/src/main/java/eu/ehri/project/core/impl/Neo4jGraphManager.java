@@ -31,8 +31,8 @@ import eu.ehri.project.exceptions.ItemNotFound;
 import eu.ehri.project.models.EntityClass;
 import eu.ehri.project.models.annotations.EntityType;
 import eu.ehri.project.models.utils.ClassUtils;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
@@ -82,26 +82,25 @@ public final class Neo4jGraphManager<T extends Neo4j2Graph> extends BlueprintsGr
 
     @Override
     public CloseableIterable<Vertex> getVertices(String key, Object value,
-            EntityClass type) {
+                                                 EntityClass type) {
         return graph.getBaseGraph().getVerticesByLabelKeyValue(type.getName(),
                 key, value);
     }
 
     @Override
     public Vertex createVertex(String id, EntityClass type,
-            Map<String, ?> data) throws IntegrityError {
+                               Map<String, ?> data) throws IntegrityError {
         return setLabels(super.createVertex(id, type, data));
     }
 
     @Override
     public Vertex updateVertex(String id, EntityClass type,
-            Map<String, ?> data) throws ItemNotFound {
+                               Map<String, ?> data) throws ItemNotFound {
         return setLabels(super.updateVertex(id, type, data));
     }
 
     @Override
     public void initialize() {
-        createIndicesAndConstraints(graph.getBaseGraph().getRawGraph());
     }
 
     @Override
@@ -128,9 +127,11 @@ public final class Neo4jGraphManager<T extends Neo4j2Graph> extends BlueprintsGr
 
     /**
      * Create
+     *
+     * @param tx a Neo4j transaction
      */
-    public static void createIndicesAndConstraints(GraphDatabaseService graph) {
-        Schema schema = graph.schema();
+    public static void createIndicesAndConstraints(Transaction tx) {
+        Schema schema = tx.schema();
         for (ConstraintDefinition constraintDefinition : schema.getConstraints()) {
             constraintDefinition.drop();
         }

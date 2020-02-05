@@ -39,6 +39,7 @@ import eu.ehri.project.models.UserProfile;
 import eu.ehri.project.models.VirtualUnit;
 import eu.ehri.project.models.base.Accessor;
 import eu.ehri.project.persistence.Bundle;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import javax.ws.rs.Consumes;
@@ -66,8 +67,8 @@ public final class VirtualUnitResource extends
 
     public static final String INCLUDED = "includes";
 
-    public VirtualUnitResource(@Context GraphDatabaseService database) {
-        super(database, VirtualUnit.class);
+    public VirtualUnitResource(@Context DatabaseManagementService service) {
+        super(service, VirtualUnit.class);
     }
 
     @GET
