@@ -40,7 +40,6 @@ import eu.ehri.project.models.VirtualUnit;
 import eu.ehri.project.models.base.Watchable;
 import eu.ehri.project.persistence.Bundle;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.graphdb.GraphDatabaseService;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -142,9 +141,9 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
     @Path("{id:[^/]+}/followers")
     public Response listFollowers(@PathParam("id") String userId) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile user = api().get(userId, cls);
+            api().get(userId, cls);
             Response response = streamingPage(() -> getQuery()
-                    .page(user.getFollowers(), UserProfile.class));
+                    .page(manager.getEntityUnchecked(userId, cls).getFollowers(), UserProfile.class));
             tx.success();
             return response;
         }
@@ -155,9 +154,9 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
     @Path("{id:[^/]+}/following")
     public Response listFollowing(@PathParam("id") String userId) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile user = api().get(userId, cls);
+            api().get(userId, cls);
             Response response = streamingPage(() -> getQuery()
-                    .page(user.getFollowing(), UserProfile.class));
+                    .page(manager.getEntityUnchecked(userId, cls).getFollowing(), UserProfile.class));
             tx.success();
             return response;
         }
@@ -223,9 +222,9 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
     @Path("{id:[^/]+}/blocked")
     public Response listBlocked(@PathParam("id") String userId) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile user = api().get(userId, cls);
+            api().get(userId, cls);
             Response response = streamingPage(() -> getQuery()
-                    .page(user.getBlocked(), UserProfile.class));
+                    .page(manager.getEntityUnchecked(userId, cls).getBlocked(), UserProfile.class));
             tx.success();
             return response;
         }
@@ -275,9 +274,9 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
     @Path("{id:[^/]+}/watching")
     public Response listWatching(@PathParam("id") String userId) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile user = api().get(userId, cls);
+            api().get(userId, cls);
             Response response = streamingPage(() -> getQuery()
-                    .page(user.getWatching(), Watchable.class));
+                    .page(manager.getEntityUnchecked(userId, cls).getWatching(), Watchable.class));
             tx.success();
             return response;
         }
@@ -327,9 +326,9 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
     @Path("{id:[^/]+}/annotations")
     public Response listAnnotations(@PathParam("id") String userId) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile user = api().get(userId, cls);
+            api().get(userId, cls);
             Response response = streamingPage(() -> getQuery()
-                    .page(user.getAnnotations(), Annotation.class));
+                    .page(manager.getEntityUnchecked(userId, cls).getAnnotations(), Annotation.class));
             tx.success();
             return response;
         }
@@ -340,9 +339,9 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
     @Path("{id:[^/]+}/links")
     public Response pageLinks(@PathParam("id") String userId) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile user = api().get(userId, cls);
+            api().get(userId, cls);
             Response response = streamingPage(() -> getQuery()
-                    .page(user.getLinks(), Link.class));
+                    .page(manager.getEntityUnchecked(userId, cls).getLinks(), Link.class));
             tx.success();
             return response;
         }
@@ -353,9 +352,9 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
     @Path("{id:[^/]+}/virtual-units")
     public Response pageVirtualUnits(@PathParam("id") String userId) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile user = api().get(userId, cls);
+            api().get(userId, cls);
             Response response = streamingPage(() -> getQuery()
-                    .page(user.getVirtualUnits(), VirtualUnit.class));
+                    .page(manager.getEntityUnchecked(userId, cls).getVirtualUnits(), VirtualUnit.class));
             tx.success();
             return response;
         }
@@ -378,10 +377,12 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
             @QueryParam(AGGREGATION_PARAM) @DefaultValue("strict") EventsApi.Aggregation aggregation)
             throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile user = manager.getEntity(userId, UserProfile.class);
-            EventsApi eventsApi = getEventsApi()
-                    .withAggregation(aggregation);
-            Response response = streamingListOfLists(() -> eventsApi.aggregateActions(user));
+            manager.getEntity(userId, cls);
+            Response response = streamingListOfLists(() -> {
+                EventsApi eventsApi = getEventsApi()
+                        .withAggregation(aggregation);
+                return eventsApi.aggregateActions(manager.getEntityUnchecked(userId, cls));
+            });
             tx.success();
             return response;
         }
@@ -405,10 +406,11 @@ public class UserProfileResource extends AbstractAccessibleResource<UserProfile>
             @QueryParam(AGGREGATION_PARAM) @DefaultValue("user") EventsApi.Aggregation aggregation)
             throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            UserProfile asUser = manager.getEntity(userId, UserProfile.class);
-            EventsApi eventsApi = getEventsApi()
-                    .withAggregation(aggregation);
-            Response response = streamingListOfLists(() -> eventsApi.aggregateAsUser(asUser));
+            manager.getEntity(userId, cls);
+            Response response = streamingListOfLists(() -> {
+                EventsApi eventsApi = getEventsApi().withAggregation(aggregation);
+                return eventsApi.aggregateAsUser(manager.getEntityUnchecked(userId, cls));
+            });
             tx.success();
             return response;
         }

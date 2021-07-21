@@ -86,8 +86,9 @@ public class RepositoryResource extends AbstractAccessibleResource<Repository>
             @PathParam("id") String id,
             @QueryParam(ALL_PARAM) @DefaultValue("false") boolean all) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            Repository repository = api().get(id, cls);
+            checkExists(id, cls);
             Response response = streamingPage(() -> {
+                Repository repository = manager.getEntityUnchecked(id, cls);
                 Iterable<DocumentaryUnit> units = all
                         ? repository.getAllDocumentaryUnits()
                         : repository.getTopLevelDocumentaryUnits();
@@ -266,9 +267,11 @@ public class RepositoryResource extends AbstractAccessibleResource<Repository>
             final @QueryParam(LANG_PARAM) @DefaultValue(DEFAULT_LANG) String lang)
             throws IOException, ItemNotFound {
         try (final Tx tx = beginTx()) {
-            final Repository repo = api().get(id, cls);
-            final EadExporter eadExporter = new Ead2002Exporter(api());
-            Response response = exportItemsAsZip(eadExporter, repo.getTopLevelDocumentaryUnits(), lang);
+            checkExists(id, cls);
+            Response response = exportItemsAsZip(() -> new Ead2002Exporter(api()), () -> {
+                final Repository repo = manager.getEntityUnchecked(id, cls);
+                return repo.getTopLevelDocumentaryUnits();
+            }, lang);
             tx.success();
             return response;
         }

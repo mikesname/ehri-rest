@@ -29,6 +29,7 @@ import com.tinkerpop.pipes.PipeFunction;
 import eu.ehri.extension.base.AbstractAccessibleResource;
 import eu.ehri.project.acl.AclManager;
 import eu.ehri.project.api.EventsApi;
+import eu.ehri.project.api.QueryApi;
 import eu.ehri.project.api.impl.ApiImpl;
 import eu.ehri.project.core.Tx;
 import eu.ehri.project.exceptions.AccessDenied;
@@ -55,9 +56,7 @@ import eu.ehri.project.models.base.PermissionScope;
 import eu.ehri.project.models.base.Versioned;
 import eu.ehri.project.models.events.Version;
 import eu.ehri.project.persistence.Bundle;
-import eu.ehri.project.persistence.Mutation;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.w3c.dom.Document;
 
 import javax.ws.rs.Consumes;
@@ -180,9 +179,8 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
     public Response visibility(@PathParam("id") String id)
             throws PermissionDenied, ItemNotFound, SerializationError {
         try (final Tx tx = beginTx()) {
-            Accessible item = manager.getEntity(id, Accessible.class);
-            Iterable<Accessor> accessors = item.getAccessors();
-            Response response = streamingList(() -> accessors);
+            checkExists(id, Accessible.class);
+            Response response = streamingList(() -> manager.getEntityUnchecked(id, Accessible.class).getAccessors());
             tx.success();
             return response;
         }
@@ -306,12 +304,10 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
             @QueryParam(AGGREGATION_PARAM) @DefaultValue("user") EventsApi.Aggregation aggregation)
             throws ItemNotFound, AccessDenied {
         try (final Tx tx = beginTx()) {
-            Accessible item = api().get(id, Accessible.class);
-            EventsApi eventsApi = getEventsApi()
-                    .withAggregation(aggregation);
-            Response response = streamingListOfLists(() -> eventsApi.aggregateForItem(item));
+            manager.getEntity(id, cls);
             tx.success();
-            return response;
+            return streamingListOfLists(() -> getEventsApi()
+                    .aggregateForItem(manager.getEntityUnchecked(id, cls)));
         }
     }
 
@@ -327,10 +323,10 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
     public Response annotations(
             @PathParam("id") String id) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            Annotatable entity = manager.getEntity(id, Annotatable.class);
-            Response response = streamingPage(() -> getQuery().page(
-                    entity.getAnnotations(),
-                    Annotation.class));
+            checkExists(id, Annotatable.class);
+            Response response = streamingPage(() -> getQuery()
+                    .page(manager.getEntityUnchecked(id, Annotatable.class)
+                            .getAnnotations(), Annotation.class));
             tx.success();
             return response;
         }
@@ -347,10 +343,9 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
     @Path("{id:[^/]+}/links")
     public Response links(@PathParam("id") String id) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            Linkable entity = manager.getEntity(id, Linkable.class);
+            checkExists(id, Linkable.class);
             Response response = streamingPage(() -> getQuery().page(
-                    entity.getLinks(),
-                    Link.class));
+                    manager.getEntityUnchecked(id, Linkable.class).getLinks(), Link.class));
             tx.success();
             return response;
         }
@@ -365,12 +360,12 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("{id:[^/]+}/permission-grants")
     public Response permissionGrants(@PathParam("id") String id)
-            throws PermissionDenied, ItemNotFound {
+            throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            PermissionGrantTarget target = manager.getEntity(id, PermissionGrantTarget.class);
+            checkExists(id, PermissionGrantTarget.class);
             Response response = streamingPage(() -> getQuery()
-                    .page(target.getPermissionGrants(),
-                            PermissionGrant.class));
+                    .page(manager.getEntityUnchecked(id, PermissionGrantTarget.class)
+                            .getPermissionGrants(), PermissionGrant.class));
             tx.success();
             return response;
         }
@@ -387,10 +382,10 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
     public Response permissionGrantsAsScope(@PathParam("id") String id)
             throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            PermissionScope scope = manager.getEntity(id, PermissionScope.class);
+            checkExists(id, PermissionScope.class);
             Response response = streamingPage(() -> getQuery()
-                    .page(scope.getPermissionGrants(),
-                            PermissionGrant.class));
+                            .page(manager.getEntityUnchecked(id, PermissionScope.class)
+                                    .getPermissionGrants(), PermissionGrant.class));
             tx.success();
             return response;
         }
@@ -459,9 +454,9 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
     @Path("{id:[^/]+}/versions")
     public Response listVersions(@PathParam("id") String id) throws ItemNotFound, AccessDenied {
         try (final Tx tx = beginTx()) {
-            Versioned item = api().get(id, Versioned.class);
-            Response response = streamingPage(() -> getQuery().setStream(true)
-                    .page(item.getAllPriorVersions(), Version.class));
+            checkExists(id, Versioned.class);
+            Response response = streamingPage(() -> getQuery().withStreaming(true)
+                    .page(manager.getEntityUnchecked(id, Versioned.class).getAllPriorVersions(), Version.class));
             tx.success();
             return response;
         }

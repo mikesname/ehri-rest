@@ -163,12 +163,27 @@ public final class QueryApiImpl implements QueryApi {
     }
 
     @Override
-    public QueryApiImpl setOffset(int offset) {
+    public int offset() {
+        return offset;
+    }
+
+    @Override
+    public int limit() {
+        return limit;
+    }
+
+    @Override
+    public boolean streaming() {
+        return stream;
+    }
+
+    @Override
+    public QueryApiImpl withOffset(int offset) {
         return new Builder(this).setOffset(offset).build();
     }
 
     @Override
-    public QueryApiImpl setLimit(int limit) {
+    public QueryApiImpl withLimit(int limit) {
         return new Builder(this).setLimit(limit).build();
     }
 
@@ -200,7 +215,7 @@ public final class QueryApiImpl implements QueryApi {
     }
 
     @Override
-    public QueryApiImpl setStream(boolean stream) {
+    public QueryApiImpl withStreaming(boolean stream) {
         return new Builder(this).setStream(stream).build();
     }
 

@@ -77,8 +77,9 @@ public class DocumentaryUnitResource
             @PathParam("id") String id,
             @QueryParam(ALL_PARAM) @DefaultValue("false") boolean all) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            DocumentaryUnit parent = manager.getEntity(id, DocumentaryUnit.class);
+            manager.getEntity(id, cls);
             Response response = streamingPage(() -> {
+                DocumentaryUnit parent = manager.getEntityUnchecked(id, DocumentaryUnit.class);
                 Iterable<DocumentaryUnit> units = all
                         ? parent.getAllChildren()
                         : parent.getChildren();

@@ -51,6 +51,7 @@ import javax.xml.transform.TransformerException;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.zip.ZipEntry;
@@ -102,8 +103,8 @@ public class AbstractAccessibleResource<E extends Accessible> extends AbstractRe
     /**
      * Constructor
      *
-     * @param dbms  the DBMS
-     * @param cls   the entity Java class
+     * @param dbms the DBMS
+     * @param cls  the entity Java class
      */
     public AbstractAccessibleResource(@Context DatabaseManagementService dbms, Class<E> cls) {
         super(dbms);
@@ -269,8 +270,9 @@ public class AbstractAccessibleResource<E extends Accessible> extends AbstractRe
 
     /**
      * Delete an item and all of its child items.
-     * @param id the item's ID
-     * @param children an iterable of child items
+     *
+     * @param id  the item's ID
+     * @param all whether to descend recursively into hierarchical items
      * @return a table of delete item IDs
      */
     protected Table deleteContents(String id, boolean all)
@@ -280,21 +282,21 @@ public class AbstractAccessibleResource<E extends Accessible> extends AbstractRe
             List<String> data = api().deleteChildren(id, all, getLogMessage());
             return Table.column(data);
         } catch (SerializationError e) {
-           throw new RuntimeException(e);
+            throw new RuntimeException(e);
         }
     }
 
     // Helpers
 
-    protected <T extends Entity> Response exportItemsAsZip(XmlExporter<T> exporter, Iterable<T> items, String lang) {
+    protected <T extends Entity> Response exportItemsAsZip(Supplier<XmlExporter<T>> exporter, Supplier<Iterable<T>> items, String lang) {
         return Response.ok((StreamingOutput) outputStream -> {
             try (final Tx tx = beginTx();
                  ZipOutputStream zos = new ZipOutputStream(outputStream)) {
-                for (T item : items) {
+                for (T item : items.get()) {
                     ZipEntry zipEntry = new ZipEntry(item.getId() + ".xml");
                     zipEntry.setComment("Exported from the EHRI portal at " + (DateTime.now()));
                     zos.putNextEntry(zipEntry);
-                    exporter.export(item, zos, lang);
+                    exporter.get().export(item, zos, lang);
                     zos.closeEntry();
                 }
                 tx.success();

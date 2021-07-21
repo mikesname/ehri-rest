@@ -93,8 +93,9 @@ public final class VirtualUnitResource extends
             @PathParam("id") String id,
             @QueryParam(ALL_PARAM) @DefaultValue("false") boolean all) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            VirtualUnit parent = manager.getEntity(id, VirtualUnit.class);
+            manager.getEntity(id, cls);
             Response response = streamingPage(() -> {
+                VirtualUnit parent = manager.getEntityUnchecked(id, cls);
                 Iterable<VirtualUnit> units = all
                         ? parent.getAllChildren()
                         : parent.getChildren();
@@ -111,9 +112,12 @@ public final class VirtualUnitResource extends
     public Response listIncludedVirtualUnits(
             @PathParam("id") String id) throws ItemNotFound {
         try (final Tx tx = beginTx()) {
-            VirtualUnit parent = manager.getEntity(id, VirtualUnit.class);
-            Response response = streamingPage(() -> getQuery()
-                    .page(parent.getIncludedUnits(), DocumentaryUnit.class));
+            manager.getEntity(id, cls);
+            Response response = streamingPage(() -> {
+                VirtualUnit parent = manager.getEntityUnchecked(id, VirtualUnit.class);
+                return getQuery()
+                        .page(parent.getIncludedUnits(), DocumentaryUnit.class);
+            });
             tx.success();
             return response;
         }
