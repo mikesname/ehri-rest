@@ -193,9 +193,15 @@ public class EadHandler extends SaxXmlHandler {
         }
 
         if (qName.equals(ImportHelpers.LANGUAGE_KEY_PREFIX) || localName.equals(ImportHelpers.LANGUAGE_KEY_PREFIX)) {
-            String lang = (String) currentGraphPath.peek().get("languageCode");
-            if (lang != null) {
-                langCode = lang;
+            Object languageCode = currentGraphPath.peek().get("languageCode");
+            if (languageCode instanceof String) {
+                langCode = (String)languageCode;
+            } else if (languageCode instanceof List && !((List<?>)languageCode).isEmpty()) {
+                List<?> list = (List<?>)languageCode;
+                langCode = (String)list.get(0);
+                if (list.size() > 1) {
+                    logger.warn("Ignoring additional languages: {}", Joiner.on(',').join(list.subList(1, list.size())));
+                }
             }
         }
 
