@@ -111,8 +111,10 @@ query test {
         }
     }
 
-    CvocConcept(id: "cvoc1") {
+    cvocc1: CvocConcept(id: "cvocc1") {
         identifier
+        latitude
+        longitude
         ...desc
     }
 

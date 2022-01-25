@@ -1,5 +1,7 @@
 package eu.ehri.project.graphql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import eu.ehri.project.test.AbstractFixtureTest;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
@@ -15,6 +17,7 @@ public class GraphQLImplTest extends AbstractFixtureTest {
         GraphQLSchema schema = graphQL.getSchema();
         String testQuery = readResourceFileAsString("testquery.graphql");
         ExecutionResult result = GraphQL.newGraphQL(schema).build().execute(testQuery);
+
         // System.out.println(result);
         assertTrue(result.getErrors().isEmpty());
     }

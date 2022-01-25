@@ -688,6 +688,8 @@
   type: CvocConcept
   data:
     identifier: cvocc1
+    latitude: 51.0
+    longitude: 0.0
   relationships:
     describes:
       - id: cvocc1-desc

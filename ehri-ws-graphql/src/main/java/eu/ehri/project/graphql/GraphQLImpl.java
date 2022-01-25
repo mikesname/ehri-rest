@@ -151,6 +151,8 @@ public class GraphQLImpl {
                 .typeResolver(temporalInterface, entityTypeResolver)
                 .dataFetcher(coordinates(accessPointType.getName(), Ontology.ACCESS_POINT_TYPE), attributeDataFetcher)
                 .dataFetcher(coordinates(annotationType.getName(), "by"), annotationNameDataFetcher)
+                .dataFetcher(coordinates(conceptType.getName(), Geo.latitude.name()), attributeDataFetcher)
+                .dataFetcher(coordinates(conceptType.getName(), Geo.longitude.name()), attributeDataFetcher)
                 .build();
     }
 
@@ -369,7 +371,7 @@ public class GraphQLImpl {
 
     private static final DataFetcher<Object> attributeDataFetcher = env -> {
         Entity source = env.getSource();
-        String name = env.getMergedField().getName();
+        String name = env.getField().getName();
         return source.getProperty(name);
     };
 
@@ -599,13 +601,13 @@ public class GraphQLImpl {
             newFieldDefinition()
                     .name(Geo.latitude.name())
                     .description(Geo.latitude.getDescription())
-                    .type(GraphQLBigDecimal)
+                    .type(GraphQLFloat)
                     .dataFetcher(attributeDataFetcher)
                     .build(),
             newFieldDefinition()
                     .name(Geo.longitude.name())
                     .description(Geo.longitude.getDescription())
-                    .type(GraphQLBigDecimal)
+                    .type(GraphQLFloat)
                     .dataFetcher(attributeDataFetcher)
                     .build()
     );
@@ -1108,9 +1110,9 @@ public class GraphQLImpl {
             .description(__("cvocConcept.description"))
             .fields(entityFields)
             .field(nonNullAttr(Ontology.IDENTIFIER_KEY, __("cvocConcept.field.identifier.description")))
+            .fields(geoFields)
             .fields(conceptNullFields)
             .fields(conceptListFields)
-            .fields(geoFields)
             .field(descriptionsFieldDefinition(conceptDescriptionType))
             .field(singleDescriptionFieldDefinition(conceptDescriptionType))
             .field(listFieldDefinition("related", __("cvocConcept.field.related.description"),

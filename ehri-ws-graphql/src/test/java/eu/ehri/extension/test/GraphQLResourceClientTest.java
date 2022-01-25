@@ -83,7 +83,7 @@ public class GraphQLResourceClientTest extends AbstractResourceClientTest {
         assertNull(response.getHeaders().getFirst("Transfer-Encoding"));
 
         JsonNode data = response.getEntity(JsonNode.class);
-        // System.out.println(data);
+         System.out.println(data);
         assertStatus(OK, response);
         assertEquals("c1", data.path("data").path("c1").path("id").textValue());
         assertEquals(0, data.path("data").path("c1").path("ancestors").size());
@@ -114,6 +114,12 @@ public class GraphQLResourceClientTest extends AbstractResourceClientTest {
                 .path(0).path("id").textValue());
         assertEquals("c1", data.path("data").path("c3").path("ancestors")
                 .path(1).path("id").textValue());
+        assertEquals("cvocc1", data.path("data").path("cvocc1")
+                .path("identifier").textValue());
+        assertEquals(51.0, data.path("data").path("cvocc1")
+                .path("latitude").numberValue());
+        assertEquals(0.0, data.path("data").path("cvocc1")
+                .path("longitude").numberValue());
         assertEquals("ann7", data.path("data").path("c4")
                 .path("annotations").path(0).path("id").textValue());
         assertEquals("scopeAndContent", data.path("data").path("c3")
