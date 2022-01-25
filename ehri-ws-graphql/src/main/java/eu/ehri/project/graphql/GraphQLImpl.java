@@ -51,7 +51,6 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static graphql.Scalars.*;
-import static graphql.scalars.java.JavaPrimitives.GraphQLBigDecimal;
 import static graphql.schema.FieldCoordinates.coordinates;
 import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLEnumType.newEnum;
@@ -199,7 +198,8 @@ public class GraphQLImpl {
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
         // Annotations
-        builder.dataFetcher(coordinates(annotationType.getName(), Ontology.ANNOTATION_NOTES_BODY), attributeDataFetcher)
+        builder.dataFetcher(coordinates(annotationType.getName(), "targets"), oneToManyRelationshipFetcher(d -> d.as(Annotation.class).getTargets()))
+                .dataFetcher(coordinates(annotationType.getName(), Ontology.ANNOTATION_NOTES_BODY), attributeDataFetcher)
                 .dataFetcher(coordinates(annotationType.getName(), Ontology.ANNOTATION_FIELD), attributeDataFetcher)
                 .dataFetcher(coordinates(annotationType.getName(), "by"), annotationNameDataFetcher)
                 .dataFetcher(coordinates(annotationType.getName(), Ontology.ANNOTATION_TYPE), attributeDataFetcher);
@@ -229,6 +229,7 @@ public class GraphQLImpl {
                     .dataFetcher(coordinates(name, "links"), oneToManyRelationshipFetcher(r -> r.as(Linkable.class).getLinks()))
                     .dataFetcher(coordinates(name + "Description", Ontology.IDENTIFIER_KEY), attributeDataFetcher)
                     .dataFetcher(coordinates(name + "Description", Ontology.LANGUAGE_OF_DESCRIPTION), attributeDataFetcher)
+                    .dataFetcher(coordinates(name + "Description", "dates"), oneToManyRelationshipFetcher(r -> r.as(Temporal.class).getDatePeriods()))
                     .dataFetcher(coordinates(name + "Description", "accessPoints"), oneToManyRelationshipFetcher(r -> r.as(Description.class).getAccessPoints())));
 
        // Geo
@@ -254,18 +255,7 @@ public class GraphQLImpl {
                 Entities.DOCUMENTARY_UNIT
         ).forEach(name -> builder.dataFetcher(coordinates(name, "related"), relatedItemsDataFetcher));
 
-        Lists.newArrayList(
-               "documentaryUnits",
-        "repositories",
-        "historicalAgents",
-        "countries",
-        "authoritativeSets",
-        "concepts",
-        "vocabularies",
-        "annotations",
-        "links"
-       );
-
+       // Connections
        Map<String, EntityClass> connections = ImmutableMap.<String, EntityClass>builder()
                .put("documentaryUnits", EntityClass.DOCUMENTARY_UNIT)
                .put("repositories", EntityClass.REPOSITORY)
@@ -306,11 +296,6 @@ public class GraphQLImpl {
                 .dataFetcher(coordinates(Entities.CVOC_CONCEPT, "narrower"), oneToManyRelationshipFetcher(c -> c.as(Concept.class).getNarrowerConcepts()))
                 .dataFetcher(coordinates(Entities.CVOC_CONCEPT, "vocabulary"), manyToOneRelationshipFetcher(c -> c.as(Concept.class).getVocabulary()))
                 .dataFetcher(coordinates(Entities.CVOC_VOCABULARY, "concepts"), oneToManyRelationshipConnectionFetcher(c -> c.as(Vocabulary.class).getConcepts()));
-
-        // Relationships
-        builder.dataFetcher(coordinates("Relationship", "context"), PropertyDataFetcher.fetching("context"))
-                .dataFetcher(coordinates("Relationship", "item"), PropertyDataFetcher.fetching("item"));
-
 
         return builder.build();
     }
