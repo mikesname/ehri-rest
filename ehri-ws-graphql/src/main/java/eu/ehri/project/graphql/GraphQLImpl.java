@@ -141,19 +141,33 @@ public class GraphQLImpl {
     }
 
     private GraphQLCodeRegistry codeRegistry() {
-        return GraphQLCodeRegistry.newCodeRegistry()
-                .typeResolver(entityInterface, entityTypeResolver)
-                .typeResolver(describedInterface, entityTypeResolver)
-                .typeResolver(descriptionInterface, descriptionTypeResolver)
-                .typeResolver(annotatableInterface, entityTypeResolver)
-                .typeResolver(linkableInterface, entityTypeResolver)
-                .typeResolver(temporalDescriptionInterface, descriptionTypeResolver)
-                .typeResolver(temporalInterface, entityTypeResolver)
-                .dataFetcher(coordinates(accessPointType.getName(), Ontology.ACCESS_POINT_TYPE), attributeDataFetcher)
-                .dataFetcher(coordinates(annotationType.getName(), "by"), annotationNameDataFetcher)
-                .dataFetcher(coordinates(conceptType.getName(), Geo.latitude.name()), attributeDataFetcher)
-                .dataFetcher(coordinates(conceptType.getName(), Geo.longitude.name()), attributeDataFetcher)
-                .build();
+        GraphQLCodeRegistry.Builder builder = GraphQLCodeRegistry.newCodeRegistry()
+            .defaultDataFetcher(env -> attributeDataFetcher)
+
+            .typeResolver(entityInterface, entityTypeResolver)
+            .typeResolver(describedInterface, entityTypeResolver)
+            .typeResolver(descriptionInterface, descriptionTypeResolver)
+            .typeResolver(annotatableInterface, entityTypeResolver)
+            .typeResolver(linkableInterface, entityTypeResolver)
+            .typeResolver(temporalDescriptionInterface, descriptionTypeResolver)
+            .typeResolver(temporalInterface, entityTypeResolver)
+            .dataFetcher(coordinates(annotationType.getName(), "by"), annotationNameDataFetcher)
+            .dataFetcher(coordinates(Entities.COUNTRY, Ontology.NAME_KEY), transformingDataFetcher(idDataFetcher, LanguageHelpers::countryCodeToName))
+
+            // ID and Type fields
+            .dataFetcher(coordinates(entityInterface.getName(), idField.getName()), idDataFetcher)
+            .dataFetcher(coordinates(entityInterface.getName(), typeField.getName()), typeDataFetcher)
+
+            // Description types
+            .dataFetcher(coordinates(describedInterface.getName(), "description"), descriptionDataFetcher)
+
+
+                ;
+
+            // Override default data fetchers for list types
+            // TODO: connections...
+
+        return builder.build();
     }
 
     private static String __(String key) {
@@ -462,8 +476,7 @@ public class GraphQLImpl {
         return newFieldDefinition()
                 .type(type)
                 .name(name)
-                .description(description)
-                .dataFetcher(attributeDataFetcher);
+                .description(description);
     }
 
     private static GraphQLFieldDefinition.Builder nullAttr(String name, String description) {
@@ -474,8 +487,7 @@ public class GraphQLImpl {
         return newFieldDefinition()
                 .type(type)
                 .name(name)
-                .description(description)
-                .dataFetcher(attributeDataFetcher);
+                .description(description);
     }
 
     private static GraphQLFieldDefinition.Builder nonNullAttr(String name, String description) {
@@ -490,7 +502,6 @@ public class GraphQLImpl {
                                 .type(GraphQLString)
                                 .name(f.name())
                                 .description(f.getDescription())
-                                .dataFetcher(attributeDataFetcher)
                                 .build()
                 ).collect(Collectors.toList());
     }
@@ -512,14 +523,12 @@ public class GraphQLImpl {
             .type(GraphQLNonNullString)
             .name(Bundle.ID_KEY)
             .description(__("graphql.field.id.description"))
-            .dataFetcher(idDataFetcher)
             .build();
 
     private static final GraphQLFieldDefinition typeField = newFieldDefinition()
             .type(GraphQLNonNullString)
             .name(Bundle.TYPE_KEY)
             .description(__("graphql.field.type.description"))
-            .dataFetcher(typeDataFetcher)
             .build();
 
     private static GraphQLFieldDefinition.Builder singleDescriptionFieldDefinition(GraphQLOutputType descriptionType) {
@@ -545,8 +554,7 @@ public class GraphQLImpl {
                         .defaultValue(1)
                         .build()
                 )
-                .description(__("graphl.field.description.description"))
-                .dataFetcher(descriptionDataFetcher);
+                .description(__("graphl.field.description.description"));
     }
 
     private static GraphQLFieldDefinition.Builder listFieldDefinition(String name, String description,
@@ -1089,8 +1097,6 @@ public class GraphQLImpl {
                     .name(Ontology.NAME_KEY)
                     .description(__("country.field.name.description"))
                     .type(GraphQLNonNull.nonNull(GraphQLString))
-                    .dataFetcher(transformingDataFetcher(idDataFetcher,
-                            LanguageHelpers::countryCodeToName))
                     .build()
             )
             .fields(countryDescriptionNullFields)
