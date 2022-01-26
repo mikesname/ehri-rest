@@ -83,6 +83,8 @@ public class GraphQLImpl {
     private static final String NEXT_PAGE = "nextPage";
     private static final String PREVIOUS_PAGE = "previousPage";
 
+    private static final String ROOT_NAME = "Root";
+
     private static final int DEFAULT_LIST_LIMIT = 40;
     private static final int MAX_LIST_LIMIT = 100;
 
@@ -140,9 +142,9 @@ public class GraphQLImpl {
     }
 
     private GraphQLCodeRegistry codeRegistry() {
-        GraphQLCodeRegistry.Builder builder = GraphQLCodeRegistry.newCodeRegistry()
-//            .defaultDataFetcher(env -> attributeDataFetcher)
+        GraphQLCodeRegistry.Builder builder = GraphQLCodeRegistry.newCodeRegistry();
 
+        builder
             .typeResolver(entityInterface, entityTypeResolver)
             .typeResolver(describedInterface, entityTypeResolver)
             .typeResolver(descriptionInterface, descriptionTypeResolver)
@@ -163,11 +165,24 @@ public class GraphQLImpl {
                 Entities.ANNOTATION,
                 Entities.LINK
         ).forEach(name ->
-                builder.dataFetcher(coordinates("Root", name), entityIdDataFetcher(name))
+                builder.dataFetcher(coordinates(ROOT_NAME, name), entityIdDataFetcher(name))
                         .dataFetcher(coordinates(name, idField.getName()), idDataFetcher)
                         .dataFetcher(coordinates(name, typeField.getName()), typeDataFetcher)
+                        .dataFetcher(coordinates(name, Ontology.IDENTIFIER_KEY), attributeDataFetcher)
                         .dataFetcher(coordinates(name, "annotations"), oneToManyRelationshipFetcher(r -> r.as(Annotatable.class).getAnnotations()))
                         .dataFetcher(coordinates(name, "systemEvents"), itemEventsDataFetcher()));
+
+        Arrays.stream(CountryInfo.values()).forEach(field ->
+                builder.dataFetcher(coordinates(Entities.COUNTRY, field.name()),
+                        field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
+
+        Arrays.stream(Skos.values()).forEach(field ->
+                builder.dataFetcher(coordinates(Entities.CVOC_CONCEPT, field.name()),
+                        field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
+
+        Arrays.stream(ContactInfo.values()).forEach(field ->
+                builder.dataFetcher(coordinates(Entities.ADDRESS, field.name()),
+                        field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
         Arrays.stream(Isdiah.values()).forEach(field ->
                 builder.dataFetcher(coordinates(Entities.REPOSITORY + "Description", field.name()),
@@ -181,20 +196,8 @@ public class GraphQLImpl {
                 builder.dataFetcher(coordinates(Entities.HISTORICAL_AGENT + "Description", field.name()),
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
-        Arrays.stream(CountryInfo.values()).forEach(field ->
-                builder.dataFetcher(coordinates(Entities.COUNTRY, field.name()),
-                        field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
-
-        Arrays.stream(Skos.values()).forEach(field ->
-                builder.dataFetcher(coordinates(Entities.CVOC_CONCEPT, field.name()),
-                        field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
-
         Arrays.stream(SkosMultilingual.values()).forEach(field ->
                 builder.dataFetcher(coordinates(Entities.CVOC_CONCEPT + "Description", field.name()),
-                        field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
-
-        Arrays.stream(ContactInfo.values()).forEach(field ->
-                builder.dataFetcher(coordinates(Entities.ADDRESS, field.name()),
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
         // Annotations
@@ -208,14 +211,18 @@ public class GraphQLImpl {
         builder.dataFetcher(coordinates(accessPointType.getName(), Ontology.NAME_KEY), attributeDataFetcher)
                 .dataFetcher(coordinates(accessPointType.getName(), Ontology.ACCESS_POINT_TYPE), attributeDataFetcher);
 
-        // Data periods
+        // Date periods
         builder.dataFetcher(coordinates(datePeriodType.getName(), Ontology.DATE_PERIOD_START_DATE), attributeDataFetcher)
                 .dataFetcher(coordinates(datePeriodType.getName(), Ontology.DATE_PERIOD_END_DATE), attributeDataFetcher);
+
+        // Links
+        builder.dataFetcher(coordinates(linkType.getName(), Ontology.LINK_HAS_DESCRIPTION), attributeDataFetcher)
+                .dataFetcher(coordinates(linkType.getName(), Ontology.LINK_HAS_TYPE), attributeDataFetcher)
+        .dataFetcher(coordinates(linkType.getName(), "body"), oneToManyRelationshipFetcher(d -> d.as(Link.class).getLinkBodies()));
 
         // Addresses
         builder.dataFetcher(coordinates(Entities.REPOSITORY_DESCRIPTION, "addresses"), oneToManyRelationshipFetcher(d -> d.as(RepositoryDescription.class).getAddresses()));
 
-        // Override default data fetchers for list types
         // Description types
         Lists.newArrayList(
                 Entities.DOCUMENTARY_UNIT,
@@ -236,10 +243,11 @@ public class GraphQLImpl {
        Lists.newArrayList(
                Entities.REPOSITORY,
                Entities.CVOC_CONCEPT
-       ).forEach(name -> builder.dataFetcher(coordinates(name, "latitude"), attributeDataFetcher)
-                               .dataFetcher(coordinates(name, "longitude"), attributeDataFetcher));
+       ).forEach(name ->
+            builder.dataFetcher(coordinates(name, "latitude"), attributeDataFetcher)
+                   .dataFetcher(coordinates(name, "longitude"), attributeDataFetcher));
 
-       // Item counts
+       // Item counts...
         builder
                 .dataFetcher(coordinates(Entities.REPOSITORY, "itemCount"), itemCountFetcher(r -> r.as(Repository.class).countChildren()) )
                 .dataFetcher(coordinates(Entities.DOCUMENTARY_UNIT, "itemCount"), itemCountFetcher(d -> d.as(DocumentaryUnit.class).countChildren()))
@@ -248,7 +256,7 @@ public class GraphQLImpl {
                 .dataFetcher(coordinates(Entities.CVOC_CONCEPT, "itemCount"), itemCountFetcher(d -> d.as(Concept.class).countChildren()))
                 .dataFetcher(coordinates(Entities.CVOC_VOCABULARY, "itemCount"), itemCountFetcher(d -> d.as(Vocabulary.class).countChildren()));
 
-        // Related
+        // Related items...
         Lists.newArrayList(
                 Entities.REPOSITORY,
                 Entities.HISTORICAL_AGENT,
@@ -269,13 +277,12 @@ public class GraphQLImpl {
                .build();
 
        connections.forEach((plural, et) ->
-               builder.dataFetcher(coordinates("Root", plural), entityTypeConnectionDataFetcher(et))
+               builder.dataFetcher(coordinates(ROOT_NAME, plural), entityTypeConnectionDataFetcher(et))
        );
 
         // Documentary units: top level only (deprecated)
-        builder.dataFetcher(coordinates("Root", "topLevelDocumentaryUnits"), topLevelDocDataFetcher())
-                .dataFetcher(coordinates("Root", "documentaryUnits"), docDataFetcher());
-
+        builder.dataFetcher(coordinates(ROOT_NAME, "topLevelDocumentaryUnits"), topLevelDocDataFetcher())
+                .dataFetcher(coordinates(ROOT_NAME, "documentaryUnits"), docDataFetcher());
 
         builder.dataFetcher(coordinates(Entities.COUNTRY, "repositories"), oneToManyRelationshipConnectionFetcher(c -> c.as(Country.class).getRepositories()))
                 .dataFetcher(coordinates(Entities.REPOSITORY, "documentaryUnits"), hierarchicalOneToManyRelationshipConnectionFetcher(
@@ -296,6 +303,14 @@ public class GraphQLImpl {
                 .dataFetcher(coordinates(Entities.CVOC_CONCEPT, "narrower"), oneToManyRelationshipFetcher(c -> c.as(Concept.class).getNarrowerConcepts()))
                 .dataFetcher(coordinates(Entities.CVOC_CONCEPT, "vocabulary"), manyToOneRelationshipFetcher(c -> c.as(Concept.class).getVocabulary()))
                 .dataFetcher(coordinates(Entities.CVOC_VOCABULARY, "concepts"), oneToManyRelationshipConnectionFetcher(c -> c.as(Vocabulary.class).getConcepts()));
+
+        // Names
+        Lists.newArrayList(
+                Entities.AUTHORITATIVE_SET,
+                Entities.CVOC_VOCABULARY
+        ).forEach(name -> builder
+                .dataFetcher(coordinates(name, Ontology.IDENTIFIER_KEY), attributeDataFetcher)
+                .dataFetcher(coordinates(name, Ontology.NAME_KEY), attributeDataFetcher));
 
         return builder.build();
     }
@@ -764,12 +779,11 @@ public class GraphQLImpl {
                 .description(__("graphql.field.descriptions.description"));
     }
 
-    private GraphQLFieldDefinition.Builder itemCountFieldDefinition(Function<Entity, Integer> f) {
-        return newFieldDefinition()
+    private final GraphQLFieldDefinition.Builder itemCountFieldDefinition =
+        newFieldDefinition()
                 .type(GraphQLNonNull.nonNull(GraphQLInt))
                 .name("itemCount")
                 .description(__("graphql.field.itemCount.description"));
-    }
 
     private final GraphQLFieldDefinition.Builder linkFieldDefinition =
             listFieldDefinition("links", __("graphql.field.links.description"),
@@ -1130,7 +1144,7 @@ public class GraphQLImpl {
             .description(__("repository.description"))
             .fields(entityFields)
             .field(nonNullAttr(Ontology.IDENTIFIER_KEY, __("repository.field.identifier.description")))
-            .field(itemCountFieldDefinition(r -> r.as(Repository.class).countChildren()))
+            .field(itemCountFieldDefinition)
             .field(connectionFieldDefinition("documentaryUnits", __("repository.field.documentaryUnits.description"),
                     GraphQLTypeReference.typeRef("documentaryUnits"),
                     allArgument))
@@ -1153,7 +1167,7 @@ public class GraphQLImpl {
             .field(descriptionsFieldDefinition(documentaryUnitDescriptionType))
             .field(singleDescriptionFieldDefinition(documentaryUnitDescriptionType))
             .field(itemFieldDefinition("repository", __("documentaryUnit.field.repository.description"), repositoryType))
-            .field(itemCountFieldDefinition(d -> d.as(DocumentaryUnit.class).countChildren()))
+            .field(itemCountFieldDefinition)
             .field(connectionFieldDefinition("children", __("documentaryUnit.field.children.description"),
                     GraphQLTypeReference.typeRef("documentaryUnits"),
                     allArgument))
@@ -1187,7 +1201,7 @@ public class GraphQLImpl {
             .field(nonNullAttr(Ontology.IDENTIFIER_KEY, __("authoritativeSet.field.identifier.description")))
             .field(nonNullAttr(Ontology.NAME_KEY, __("authoritativeSet.field.name.description")))
             .field(nullAttr("description", __("authoritativeSet.field.description.description")))
-            .field(itemCountFieldDefinition(a -> a.as(AuthoritativeSet.class).countChildren()))
+            .field(itemCountFieldDefinition)
             .field(connectionFieldDefinition("authorities", __("authoritativeSet.field.authorities.description"),
                     GraphQLTypeReference.typeRef("historicalAgents")))
             .fields(linksAndAnnotationsFields())
@@ -1208,7 +1222,7 @@ public class GraphQLImpl {
             )
             .fields(countryDescriptionNullFields)
             .fields(countryDescriptionListFields)
-            .field(itemCountFieldDefinition(c -> c.as(Country.class).countChildren()))
+            .field(itemCountFieldDefinition)
             .field(connectionFieldDefinition("repositories", __("country.field.repositories.description"),
                     GraphQLTypeReference.typeRef("repositories")))
             .fields(linksAndAnnotationsFields())
@@ -1228,7 +1242,7 @@ public class GraphQLImpl {
             .field(singleDescriptionFieldDefinition(conceptDescriptionType))
             .field(listFieldDefinition("related", __("cvocConcept.field.related.description"),
                     GraphQLTypeReference.typeRef(Entities.CVOC_CONCEPT)))
-            .field(itemCountFieldDefinition(c -> c.as(Concept.class).countChildren()))
+            .field(itemCountFieldDefinition)
             .field(listFieldDefinition("broader", __("cvocConcept.field.broader.description"),
                     GraphQLTypeReference.typeRef(Entities.CVOC_CONCEPT)))
             .field(listFieldDefinition("narrower", __("cvocConcept.field.narrower.description"),
@@ -1247,7 +1261,7 @@ public class GraphQLImpl {
             .field(nonNullAttr(Ontology.IDENTIFIER_KEY, __("cvocVocabulary.field.identifier.description")))
             .field(nonNullAttr(Ontology.NAME_KEY, __("cvocVocabulary.field.name.description")))
             .field(nullAttr("description", __("cvocVocabulary.field.description.description")))
-            .field(itemCountFieldDefinition(r -> r.as(Vocabulary.class).countChildren()))
+            .field(itemCountFieldDefinition)
             .field(connectionFieldDefinition("concepts", __("cvocVocabulary.field.concepts.description"),
                     GraphQLTypeReference.typeRef("concepts")))
             .fields(linksAndAnnotationsFields())
@@ -1319,7 +1333,7 @@ public class GraphQLImpl {
 
     private GraphQLObjectType queryType() {
         return newObject()
-                .name("Root")
+                .name(ROOT_NAME)
 
                 // Single item types...
                 .field(itemFieldDefinition(Entities.DOCUMENTARY_UNIT, __("root.single.documentaryUnit.description"), documentaryUnitType, idArgument))

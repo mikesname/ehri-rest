@@ -119,6 +119,7 @@ query test {
     }
 
     AuthoritativeSet(id: "auths") {
+        identifier
         name
         authorities {
             items {
@@ -126,6 +127,22 @@ query test {
                 ...desc
             }
         }
+    }
+
+    CvocVocabulary(id: "cvoc1") {
+        identifier
+        name
+        concepts {
+            items {
+                identifier
+                ...desc
+            }
+        }
+    }
+
+    Country(id: "nl") {
+        identifier
+        name
     }
 
     topLevelDocumentaryUnits {
@@ -177,6 +194,17 @@ query test {
             body
             targets {
                 id
+            }
+        }
+    }
+
+    links {
+        items {
+            id
+            description
+            body {
+                name
+                type
             }
         }
     }
