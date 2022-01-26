@@ -172,6 +172,7 @@ public class GraphQLImpl {
                         .dataFetcher(coordinates(name, "annotations"), oneToManyRelationshipFetcher(r -> r.as(Annotatable.class).getAnnotations()))
                         .dataFetcher(coordinates(name, "systemEvents"), itemEventsDataFetcher()));
 
+        // Object and description attributes
         Arrays.stream(CountryInfo.values()).forEach(field ->
                 builder.dataFetcher(coordinates(Entities.COUNTRY, field.name()),
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
@@ -185,19 +186,19 @@ public class GraphQLImpl {
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
         Arrays.stream(Isdiah.values()).forEach(field ->
-                builder.dataFetcher(coordinates(Entities.REPOSITORY + "Description", field.name()),
+                builder.dataFetcher(coordinates(Entities.REPOSITORY_DESCRIPTION, field.name()),
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
         Arrays.stream(IsadG.values()).forEach(field ->
-                builder.dataFetcher(coordinates(Entities.DOCUMENTARY_UNIT + "Description", field.name()),
+                builder.dataFetcher(coordinates(Entities.DOCUMENTARY_UNIT_DESCRIPTION, field.name()),
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
         Arrays.stream(Isaar.values()).forEach(field ->
-                builder.dataFetcher(coordinates(Entities.HISTORICAL_AGENT + "Description", field.name()),
+                builder.dataFetcher(coordinates(Entities.HISTORICAL_AGENT_DESCRIPTION, field.name()),
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
         Arrays.stream(SkosMultilingual.values()).forEach(field ->
-                builder.dataFetcher(coordinates(Entities.CVOC_CONCEPT + "Description", field.name()),
+                builder.dataFetcher(coordinates(Entities.CVOC_CONCEPT_DESCRIPTION, field.name()),
                         field.isMultiValued() ? listDataFetcher(attributeDataFetcher) : attributeDataFetcher));
 
         // Annotations
@@ -223,7 +224,7 @@ public class GraphQLImpl {
         // Addresses
         builder.dataFetcher(coordinates(Entities.REPOSITORY_DESCRIPTION, "addresses"), oneToManyRelationshipFetcher(d -> d.as(RepositoryDescription.class).getAddresses()));
 
-        // Description types
+        // Described types
         Lists.newArrayList(
                 Entities.DOCUMENTARY_UNIT,
                 Entities.REPOSITORY,
@@ -233,11 +234,21 @@ public class GraphQLImpl {
             builder.dataFetcher(coordinates(name, "description"), descriptionDataFetcher)
                     .dataFetcher(coordinates(name, Ontology.IDENTIFIER_KEY), attributeDataFetcher)
                     .dataFetcher(coordinates(name, "descriptions"), oneToManyRelationshipFetcher(r -> r.as(Described.class).getDescriptions()))
-                    .dataFetcher(coordinates(name, "links"), oneToManyRelationshipFetcher(r -> r.as(Linkable.class).getLinks()))
-                    .dataFetcher(coordinates(name + "Description", Ontology.IDENTIFIER_KEY), attributeDataFetcher)
-                    .dataFetcher(coordinates(name + "Description", Ontology.LANGUAGE_OF_DESCRIPTION), attributeDataFetcher)
-                    .dataFetcher(coordinates(name + "Description", "dates"), oneToManyRelationshipFetcher(r -> r.as(Temporal.class).getDatePeriods()))
-                    .dataFetcher(coordinates(name + "Description", "accessPoints"), oneToManyRelationshipFetcher(r -> r.as(Description.class).getAccessPoints())));
+                    .dataFetcher(coordinates(name, "links"), oneToManyRelationshipFetcher(r -> r.as(Linkable.class).getLinks())));
+
+
+        // Description types
+        Lists.newArrayList(
+                Entities.DOCUMENTARY_UNIT_DESCRIPTION,
+                Entities.REPOSITORY_DESCRIPTION,
+                Entities.HISTORICAL_AGENT_DESCRIPTION,
+                Entities.CVOC_CONCEPT_DESCRIPTION
+        ).forEach(name -> builder
+                .dataFetcher(coordinates(name, Ontology.IDENTIFIER_KEY), attributeDataFetcher)
+                .dataFetcher(coordinates(name, Ontology.NAME_KEY), attributeDataFetcher)
+                .dataFetcher(coordinates(name, Ontology.LANGUAGE_OF_DESCRIPTION), attributeDataFetcher)
+                .dataFetcher(coordinates(name, "dates"), oneToManyRelationshipFetcher(r -> r.as(Temporal.class).getDatePeriods()))
+                .dataFetcher(coordinates(name, "accessPoints"), oneToManyRelationshipFetcher(r -> r.as(Description.class).getAccessPoints())));
 
        // Geo
        Lists.newArrayList(

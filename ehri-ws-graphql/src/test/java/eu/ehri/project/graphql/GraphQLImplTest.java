@@ -58,6 +58,7 @@ public class GraphQLImplTest extends AbstractFixtureTest {
         JsonNode data = mapper.valueToTree(result.toSpecification());
         System.out.println(data.toPrettyString());
 
+        // DocumentaryUnit
         assertEquals("c1", data.path("data").path("c1").path("id").textValue());
         assertEquals(0, data.path("data").path("c1").path("ancestors").size());
         assertEquals(1, data.path("data").path("c1")
@@ -89,30 +90,49 @@ public class GraphQLImplTest extends AbstractFixtureTest {
                 .path(0).path("id").textValue());
         assertEquals("c1", data.path("data").path("c3").path("ancestors")
                 .path(1).path("id").textValue());
+
+        // CvocConcept
         assertEquals("cvocc1", data.path("data").path("cvocc1")
                 .path("identifier").textValue());
         assertEquals(51.0, data.path("data").path("cvocc1")
                 .path("latitude").numberValue());
         assertEquals(0.0, data.path("data").path("cvocc1")
                 .path("longitude").numberValue());
+
+        // Country
         assertEquals("nl", data.path("data").path("Country")
                 .path("identifier").textValue());
         assertEquals("Netherlands", data.path("data").path("Country")
                 .path("name").textValue());
+
+        // Repository
+        assertEquals("NIOD Description", data.path("data").path("Repository")
+                .path("description").path("name").textValue());
+        assertEquals("Amsterdam", data.path("data").path("Repository")
+                .path("description").path("addresses").path(0).path("municipality").textValue());
+        assertEquals("00 31 012345677", data.path("data").path("Repository")
+                .path("description").path("addresses").path(0).path("telephone").path(0).textValue());
+
+        // Authoritative Set
         assertEquals("auths", data.path("data").path("AuthoritativeSet")
                 .path("identifier").textValue());
         assertEquals("Authorities", data.path("data").path("AuthoritativeSet")
                 .path("name").textValue());
+
+        // CvocVocabulary
         assertEquals("cvoc1", data.path("data").path("CvocVocabulary")
                 .path("identifier").textValue());
         assertEquals("Vocabulary 1", data.path("data").path("CvocVocabulary")
                 .path("name").textValue());
+
+        // Annotations
         assertEquals("ann7", data.path("data").path("c4")
                 .path("annotations").path(0).path("id").textValue());
         assertEquals("scopeAndContent", data.path("data").path("c3")
                 .path("annotations").path(0).path("field").textValue());
         assertEquals("Mike", data.path("data").path("c3")
                 .path("annotations").path(0).path("by").textValue());
+
         assertFalse(data.path("data").path("topLevelOnly")
                 .path("items").path(0).path("id").isMissingNode());
         assertEquals(3, data.path("data").path("topLevelOnly")
@@ -125,6 +145,5 @@ public class GraphQLImplTest extends AbstractFixtureTest {
                 .path("items").path(1).path("body").path(0).path("name").textValue());
         assertFalse(data.path("data").path("wrongType").isMissingNode());
         assertTrue(data.path("data").path("wrongType").isNull());
-
     }
 }

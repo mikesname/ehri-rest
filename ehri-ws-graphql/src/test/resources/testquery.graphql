@@ -118,6 +118,17 @@ query test {
         ...desc
     }
 
+    Repository(id: "r1") {
+        identifier
+        description {
+            name
+            addresses {
+                municipality
+                telephone
+            }
+        }
+    }
+
     AuthoritativeSet(id: "auths") {
         identifier
         name
