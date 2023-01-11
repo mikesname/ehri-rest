@@ -49,7 +49,7 @@ public interface OaiPmhRenderer {
             } else if (MetadataPrefix.ead3.equals(mp)) {
                 new Ead3Exporter(api).export(w, item, langCode);
             } else {
-                new DublinCore11Exporter(api).export(w, item, langCode);
+                new DublinCore11Exporter<DocumentaryUnit>(api).export(w, item, langCode);
             }
         };
     }

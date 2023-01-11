@@ -258,7 +258,7 @@ public class GraphQLImpl {
 
         // Concept traversals
         // NB: due to an unfortunate mistake, the concept "related" field, which returns concepts
-        // that are conceptulally related, collides in naming with the generic "related" field, which
+        // that are conceptually related, collides in naming with the generic "related" field, which
         // returns a set of "Relationship" items.
         builder.dataFetchers(conceptType.getName(), ImmutableMap.of(
                 "itemCount", itemCountDataFetcher(c -> c.as(Concept.class).countChildren()),
@@ -1316,6 +1316,7 @@ public class GraphQLImpl {
             .fields(entityFields)
             .field(nullAttr(Ontology.LINK_HAS_DESCRIPTION, __("link.field.description.description")))
             .field(nullAttr(Ontology.LINK_HAS_FIELD, __("link.field.field.description")))
+            .field(nonNullAttr("linkType", __("link.field.linkType.description")))
             .field(listFieldDefinition("targets", __("link.field.targets.description"), linkableInterface))
             .field(listFieldDefinition("body", __("link.field.body.description"), accessPointType))
             .field(annotationsFieldDefinition)

@@ -19,10 +19,11 @@
 
 package eu.ehri.project.ws;
 
-import eu.ehri.project.ws.base.*;
 import eu.ehri.project.core.Tx;
 import eu.ehri.project.definitions.Entities;
 import eu.ehri.project.exceptions.*;
+import eu.ehri.project.exporters.dc.DublinCore11Exporter;
+import eu.ehri.project.exporters.dc.DublinCoreExporter;
 import eu.ehri.project.exporters.eag.Eag2012Exporter;
 import eu.ehri.project.models.Country;
 import eu.ehri.project.models.Repository;
@@ -30,11 +31,13 @@ import eu.ehri.project.persistence.Bundle;
 import eu.ehri.project.utils.Table;
 import eu.ehri.project.ws.base.*;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.w3c.dom.Document;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -160,6 +163,30 @@ public class CountryResource
                     api().withScope(country), Repository.class);
             tx.success();
             return item;
+        }
+    }
+
+    /**
+     * Export the country report as Dublin Core.
+     *
+     * @param id   the country ID
+     * @param lang a three-letter ISO639-2 code
+     * @return a Dublin Core XML document
+     * @throws ItemNotFound if the item does not exist
+     */
+    @GET
+    @Path("{id:[^/]+}/dc")
+    @Produces("text/xml")
+    public Document exportDc(
+            @PathParam("id") String id,
+            @QueryParam("lang") String lang)
+                throws ItemNotFound, IOException {
+        try (final Tx tx = beginTx()) {
+            Country item = api().get(id, Country.class);
+            DublinCoreExporter<Country> exporter = new DublinCore11Exporter<>(api());
+            Document doc = exporter.export(item, lang);
+            tx.success();
+            return doc;
         }
     }
 

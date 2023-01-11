@@ -20,9 +20,10 @@
 package eu.ehri.project.exporters.dc;
 
 import eu.ehri.project.exporters.test.XmlExporterTest;
+import eu.ehri.project.models.Country;
 import eu.ehri.project.models.DocumentaryUnit;
 import eu.ehri.project.models.HistoricalAgent;
-import eu.ehri.project.models.base.Described;
+import eu.ehri.project.models.base.Identifiable;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
@@ -30,16 +31,20 @@ import org.xml.sax.SAXException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import static eu.ehri.project.test.XmlTestHelpers.assertXPath;
-import static eu.ehri.project.test.XmlTestHelpers.parseDocument;
-import static eu.ehri.project.test.XmlTestHelpers.validatesSchema;
+import static eu.ehri.project.test.XmlTestHelpers.*;
 
 public class DublinCore11ExporterTest extends XmlExporterTest {
 
     @Test
-    public void testExport1() throws Exception {
+    public void testExportAuthority() throws Exception {
         HistoricalAgent agent = manager.getEntity("a1", HistoricalAgent.class);
         testExport(agent, "eng");
+    }
+
+    @Test
+    public void testExportCountry() throws Exception {
+        Country nl = manager.getEntity("nl", Country.class);
+        testExport(nl, "eng");
     }
 
     @Test
@@ -56,12 +61,12 @@ public class DublinCore11ExporterTest extends XmlExporterTest {
         assertXPath(doc, "Example Subject 1", "//dc/subject");
     }
 
-    private String testExport(Described item, String lang) throws Exception {
-        DublinCoreExporter exporter = new DublinCore11Exporter(api(validUser));
+    private <T extends Identifiable> String testExport(T item, String lang) throws Exception {
+        DublinCoreExporter<T> exporter = new DublinCore11Exporter<>(api(validUser));
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         exporter.export(item, baos, lang);
         String xml = baos.toString("UTF-8");
-        //System.out.println(xml);
+        System.out.println(xml);
         isValidDc(xml);
         return xml;
     }

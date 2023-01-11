@@ -19,12 +19,18 @@
 
 package eu.ehri.project.definitions;
 
+/**
+ * Model of information attached to a country entity.
+ *
+ * NB: For horrible legacy reasons the fields in this model
+ * do not match the underlying DB properties.
+ */
 public enum CountryInfo implements DefinitionList {
 
-    history,
-    situation,
-    summary,
-    extensive;
+    history,    // Mapped as 'report'
+    situation,  // Mapped as 'situation'
+    summary,    // Mapped as 'dataSummary'
+    extensive;  // Mapped as 'dataExtensive'
 
     private final Boolean multiValued;
 

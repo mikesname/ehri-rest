@@ -28,13 +28,8 @@ import eu.ehri.project.definitions.Isaar;
 import eu.ehri.project.definitions.IsadG;
 import eu.ehri.project.definitions.Isdiah;
 import eu.ehri.project.exporters.xml.AbstractStreamingXmlExporter;
-import eu.ehri.project.models.AccessPoint;
-import eu.ehri.project.models.AccessPointType;
-import eu.ehri.project.models.DatePeriod;
-import eu.ehri.project.models.DocumentaryUnit;
-import eu.ehri.project.models.base.Described;
-import eu.ehri.project.models.base.Description;
-import eu.ehri.project.models.base.Temporal;
+import eu.ehri.project.models.*;
+import eu.ehri.project.models.base.*;
 import eu.ehri.project.utils.LanguageHelpers;
 
 import javax.xml.stream.XMLStreamWriter;
@@ -44,7 +39,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 
-public class DublinCore11Exporter extends AbstractStreamingXmlExporter<Described> implements DublinCoreExporter {
+public class DublinCore11Exporter<T extends Identifiable> extends AbstractStreamingXmlExporter<T> implements DublinCoreExporter<T> {
 
     private static final String OAI_NS = "http://www.openarchives.org/OAI/2.0/oai_dc/";
     private static final String DC_NS = "http://purl.org/dc/elements/1.1/";
@@ -64,7 +59,7 @@ public class DublinCore11Exporter extends AbstractStreamingXmlExporter<Described
 
     private static final Multimap<String, String> textPropertyMappings = ImmutableMultimap
             .<String, String>builder()
-            .putAll("description", ImmutableSet.of("abstract",
+            .putAll("description", ImmutableSet.of("abstract", "report", // see 'CountryInfo'
                     IsadG.scopeAndContent.name(), IsadG.biographicalHistory.name(),
                     Isdiah.history.name(), Isdiah.geoculturalContext.name(),
                     Isaar.generalContext.name()))
@@ -84,74 +79,89 @@ public class DublinCore11Exporter extends AbstractStreamingXmlExporter<Described
     }
 
     @Override
-    public void export(XMLStreamWriter sw, Described item, String langCode) {
+    public void export(XMLStreamWriter sw, T item, String langCode) {
         root(sw, "oai_dc:dc", OAI_NS, attrs(), NAMESPACES, () -> {
             attribute(sw, "http://www.w3.org/2001/XMLSchema-instance",
                     "schemaLocation", OAI_NS + " http://www.openarchives.org/OAI/2.0/oai_dc.xsd");
 
             tag(sw, "dc:identifier", item.getIdentifier());
-            Optional<Description> descOpt = LanguageHelpers
-                    .getBestDescription(item, Optional.<Description>empty(), langCode);
 
-            descOpt.ifPresent(desc -> {
-                String langCode639_1 = LanguageHelpers.iso639DashOneCode(desc.getLanguageOfDescription());
+            if (item instanceof Described) {
+                exportDescribed(sw, item.as(Described.class), langCode);
+            } else if (item instanceof Named) {
+                tag(sw, "dc:title", item.as(Named.class).getName());
+                Optional.ofNullable(item.<String>getProperty("description"))
+                        .ifPresent(s -> tag(sw, "dc:description", s));
+            } else if (item instanceof Country) {
+                tag(sw, "dc:title", LanguageHelpers.countryCodeToName(((Country) item).getCode()));
+                Optional.ofNullable(item.<String>getProperty("report"))
+                        .ifPresent(s -> tag(sw, "dc:description", s));
+            }
+        });
+    }
 
-                tag(sw, "dc:title", desc.getName());
 
-                Optional.ofNullable(item.as(DocumentaryUnit.class).getRepository()).ifPresent(repository -> {
-                    LanguageHelpers.getBestDescription(repository, langCode).ifPresent(d ->
-                            tag(sw, "dc:publisher", d.getName())
-                    );
-                });
+    private void exportDescribed(XMLStreamWriter sw, Described item, String langCode) {
 
-                for (DatePeriod datePeriod : desc.as(Temporal.class).getDatePeriods()) {
-                    String start = datePeriod.getStartDate();
-                    String end = datePeriod.getEndDate();
-                    if (start != null && end != null) {
-                        tag(sw, "dc:coverage", String.format("%s - %s", start, end));
-                    } else if (start != null) {
-                        tag(sw, "dc:coverage", start);
+        Optional<Description> descOpt = LanguageHelpers
+                .getBestDescription(item, Optional.empty(), langCode);
+
+        descOpt.ifPresent(desc -> {
+            String langCode639_1 = LanguageHelpers.iso639DashOneCode(desc.getLanguageOfDescription());
+
+            tag(sw, "dc:title", desc.getName());
+
+            Optional.ofNullable(item.as(DocumentaryUnit.class).getRepository())
+                    .flatMap(repository -> LanguageHelpers.getBestDescription(repository, langCode))
+                    .ifPresent(d -> tag(sw, "dc:publisher", d.getName()));
+
+            for (DatePeriod datePeriod : desc.as(Temporal.class).getDatePeriods()) {
+                String start = datePeriod.getStartDate();
+                String end = datePeriod.getEndDate();
+                if (start != null && end != null) {
+                    tag(sw, "dc:coverage", String.format("%s - %s", start, end));
+                } else if (start != null) {
+                    tag(sw, "dc:coverage", start);
+                }
+            }
+
+            for (Map.Entry<String, Collection<String>> attr :
+                    propertyMappings.asMap().entrySet()) {
+                for (String key : attr.getValue()) {
+                    for (Object value : coerceList(desc.getProperty(key))) {
+                        tag(sw, "dc:" + attr.getKey(), transform(attr.getKey(), value));
                     }
                 }
+            }
 
-                for (Map.Entry<String, Collection<String>> attr :
-                        propertyMappings.asMap().entrySet()) {
-                    for (String key : attr.getValue()) {
-                        for (Object value : coerceList(desc.getProperty(key))) {
-                            tag(sw, "dc:" + attr.getKey(), transform(attr.getKey(), value));
-                        }
+            for (Map.Entry<String, Collection<String>> attr :
+                    textPropertyMappings.asMap().entrySet()) {
+                for (String key : attr.getValue()) {
+                    for (Object value : coerceList(desc.getProperty(key))) {
+                        tag(sw, "dc:" + attr.getKey(),
+                                transform(attr.getKey(), value), attrs("xml:lang", langCode639_1));
                     }
                 }
+            }
 
-                for (Map.Entry<String, Collection<String>> attr :
-                        textPropertyMappings.asMap().entrySet()) {
-                    for (String key : attr.getValue()) {
-                        for (Object value : coerceList(desc.getProperty(key))) {
-                            tag(sw, "dc:" + attr.getKey(),
-                                    transform(attr.getKey(), value), attrs("xml:lang", langCode639_1));
-                        }
-                    }
+            for (AccessPoint accessPoint : desc.getAccessPoints()) {
+                AccessPointType type = accessPoint.getRelationshipType();
+                switch (type) {
+                    case creator:
+                    case subject:
+                        tag(sw, "dc:" + type.name(), accessPoint.getName());
+                        break;
+                    case person:
+                    case corporateBody:
+                    case family:
+                        tag(sw, "dc:relation", accessPoint.getName());
+                        break;
+                    case place:
+                        tag(sw, "dc:coverage", accessPoint.getName());
+                        break;
+                    default:
                 }
-
-                for (AccessPoint accessPoint : desc.getAccessPoints()) {
-                    AccessPointType type = accessPoint.getRelationshipType();
-                    switch (type) {
-                        case creator:
-                        case subject:
-                            tag(sw, "dc:" + type.name(), accessPoint.getName());
-                            break;
-                        case person:
-                        case corporateBody:
-                        case family:
-                            tag(sw, "dc:relation", accessPoint.getName());
-                            break;
-                        case place:
-                            tag(sw, "dc:coverage", accessPoint.getName());
-                            break;
-                        default:
-                    }
-                }
-            });
+            }
         });
     }
 
