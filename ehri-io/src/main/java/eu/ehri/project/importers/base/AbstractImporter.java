@@ -27,6 +27,7 @@ import eu.ehri.project.core.GraphManagerFactory;
 import eu.ehri.project.definitions.Ontology;
 import eu.ehri.project.exceptions.ValidationError;
 import eu.ehri.project.importers.*;
+import eu.ehri.project.importers.util.DateParser;
 import eu.ehri.project.models.base.Accessible;
 import eu.ehri.project.models.base.Actioner;
 import eu.ehri.project.models.base.PermissionScope;
@@ -46,6 +47,7 @@ public abstract class AbstractImporter<I, T extends Accessible> implements ItemI
     protected final GraphManager manager;
     protected final ImportOptions options;
     protected final ImportLog log;
+    protected final DateParser dateParser;
     private final List<PreImportCallback> preCallbacks = Lists.newArrayList();
     private final List<PostImportCallback> postCallbacks = Lists.newArrayList();
     private final List<ErrorCallback> errorCallbacks = Lists.newArrayList();
@@ -101,6 +103,7 @@ public abstract class AbstractImporter<I, T extends Accessible> implements ItemI
         this.log = log;
         this.options = options;
         manager = GraphManagerFactory.getInstance(graph);
+        dateParser = new DateParser();
     }
 
     @Override

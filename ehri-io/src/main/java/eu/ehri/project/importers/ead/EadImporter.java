@@ -150,7 +150,7 @@ public class EadImporter extends AbstractImporter<Map<String, Object>, AbstractU
      * @throws ValidationError when data constraints are not met
      */
     protected Bundle getDescription(Map<String, Object> itemData) throws ValidationError {
-        List<Map<String, Object>> extractedDates = ImportHelpers.extractDates(itemData);
+        List<Map<String, Object>> extractedDates = dateParser.extractDates(itemData);
 
         Map<String, Object> raw = ImportHelpers.extractDescription(itemData, EntityClass.DOCUMENTARY_UNIT_DESCRIPTION);
 
