@@ -53,8 +53,8 @@ public class SaxImportManagerTest extends AbstractImporterTest {
     public void testImportInferHierarchy() throws Exception {
         final ImmutableMap<String, String> map = ImmutableMap.of(
                 "1c.xml", Resources.getResource("infer1c.xml").toURI().toString(),
-                "1c/1s.xml", Resources.getResource("infer1s.xml").toURI().toString(),
-                "1c/1s/1f.xml", Resources.getResource("infer1f.xml").toURI().toString(),
+                "1c_1s.xml", Resources.getResource("infer1s.xml").toURI().toString(),
+                "1c_1s_1f.xml", Resources.getResource("infer1f.xml").toURI().toString(),
                 "2c.xml", Resources.getResource("infer2c.xml").toURI().toString()
         );
         JsonMapper mapper = new JsonMapper();

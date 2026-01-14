@@ -386,7 +386,7 @@ public abstract class AbstractImportManager implements ImportManager {
     }
 
     private PermissionScope getNextPermissionScope(String currentFile) {
-        final List<String> localIds = Splitter.on('/').splitToList(currentFile);
+        final List<String> localIds = Splitter.on('_').splitToList(currentFile);
         if (localIds.size() == 1) {
             return permissionScope;
         } else {

@@ -115,7 +115,7 @@ public class ImportResourceClientTest extends AbstractResourceClientTest {
         // Get the path of an EAD file
         InputStream payloadStream = getPayloadStream(ImmutableMap.of(
                 "test-doc.xml", Resources.getResource("ead.xml").toURI().toString(),
-                "test-doc/hierarchy.xml", Resources.getResource("hierarchical-ead.xml").toURI().toString()
+                "test-doc_hierarchy.xml", Resources.getResource("hierarchical-ead.xml").toURI().toString()
         ));
 
         String logText = "Testing import";
