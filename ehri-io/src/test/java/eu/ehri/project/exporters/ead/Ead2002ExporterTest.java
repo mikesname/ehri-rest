@@ -159,6 +159,8 @@ public class Ead2002ExporterTest extends XmlExporterTest {
         assertXPath(doc, "Example text", "//ead/archdesc/processinfo[@type='Sources']/p/bibref");
         assertXPath(doc, "Example Person 1", "//ead/archdesc/controlaccess/persname");
         assertXPath(doc, "Example Subject 1", "//ead/archdesc/controlaccess/subject");
+        // The c02 creation date has year precision, so the normal date is truncated to the year
+        assertXPath(doc, "1939/1945", "//ead/archdesc/dsc/c01/c02/did/unitdate/@normal");
 
     }
 

@@ -167,10 +167,16 @@ public class Ead3ExporterTest extends XmlExporterTest {
         assertXPath(doc, "1939-1945", "//ead/archdesc/did/unitdate");
         assertXPath(doc, "1939-01-01", "//ead/archdesc/did/unitdatestructured/daterange/fromdate/@standarddate");
         assertXPath(doc, "1945-01-01", "//ead/archdesc/did/unitdatestructured/daterange/todate/@standarddate");
+        // The c01 date period has week precision: ISO 8601 cannot distinguish a week from a
+        // day, so the standarddate stays a full date and the precision is retained in @localtype
         assertXPath(doc, "1939-01-01", "//ead/archdesc/dsc/c01/did/unitdatestructured/daterange/fromdate/@standarddate");
         assertXPath(doc, "1945-01-01", "//ead/archdesc/dsc/c01/did/unitdatestructured/daterange/todate/@standarddate");
-        assertXPath(doc, "1939-01-01", "//ead/archdesc/dsc/c01/c02/did/unitdatestructured/daterange/fromdate/@standarddate");
-        assertXPath(doc, "1945-01-01", "//ead/archdesc/dsc/c01/c02/did/unitdatestructured/daterange/todate/@standarddate");
+        assertXPath(doc, "week", "//ead/archdesc/dsc/c01/did/unitdatestructured/daterange/fromdate/@localtype");
+        assertXPath(doc, "week", "//ead/archdesc/dsc/c01/did/unitdatestructured/daterange/todate/@localtype");
+        // The c02 date period has year precision, so the standarddate is truncated to the year;
+        // year precision needs no @localtype since the ISO date already conveys the granularity
+        assertXPath(doc, "1939", "//ead/archdesc/dsc/c01/c02/did/unitdatestructured/daterange/fromdate/@standarddate");
+        assertXPath(doc, "1945", "//ead/archdesc/dsc/c01/c02/did/unitdatestructured/daterange/todate/@standarddate");
 
     }
 
