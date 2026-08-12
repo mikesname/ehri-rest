@@ -24,12 +24,15 @@ import com.google.common.collect.Maps;
 import eu.ehri.project.definitions.Entities;
 import eu.ehri.project.definitions.Ontology;
 import eu.ehri.project.importers.properties.XmlImportProperties;
+import eu.ehri.project.models.DatePeriod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static eu.ehri.project.importers.util.ImportHelpers.getSubNode;
 
@@ -51,6 +54,15 @@ public class DateParser {
 
     private static final Logger logger = LoggerFactory.getLogger(DateParser.class);
     private static final XmlImportProperties dates = new XmlImportProperties("dates.properties");
+
+    // Temporary keys used to carry the EAD3 @standarddate attributes on a structured
+    // date sub-node until they are reconciled into the actual start/end date properties.
+    static final String START_STANDARD_DATE = "startStandardDate";
+    static final String END_STANDARD_DATE = "endStandardDate";
+
+    // An ISO 8601 date whose optional month and day groups reveal its granularity.
+    private static final Pattern ISO_DATE = Pattern.compile("(\\d{4})(-\\d{2})?(-\\d{2})?");
+
     private final DateRangeParser rangeParser;
 
     public DateParser() {
@@ -71,10 +83,10 @@ public class DateParser {
             Object dateRep = data.get(Entities.DATE_PERIOD);
             if (dateRep instanceof List) {
                 for (Map<String, Object> event : (List<Map<String, Object>>) dateRep) {
-                    extractedDates.add(getSubNode(event));
+                    extractedDates.add(normaliseStructuredDate(getSubNode(event)));
                 }
             } else if (dateRep instanceof Map) {
-                extractedDates.add(getSubNode((Map<String, Object>) dateRep));
+                extractedDates.add(normaliseStructuredDate(getSubNode((Map<String, Object>) dateRep)));
             } else {
                 logger.warn("Found a DatePeriod sub-node with unexpected type: " + dateRep);
             }
@@ -117,7 +129,74 @@ public class DateParser {
     }
 
     private Optional<Map<String, Object>> extractDate(String date) {
-        return rangeParser.parse(date).map(DateRange::data);
+        return rangeParser.tryParse(date).map(DateRange::data);
+    }
+
+    /**
+     * Normalise a structured (e.g. EAD3) date sub-node. The machine-readable
+     * {@code @standarddate} attributes, if present, replace the human-readable
+     * start/end date text since they carry the canonical ISO 8601 form. The date
+     * precision is then taken from an explicit value - as exported in the EAD3
+     * {@code @localtype} for the quarter/week precisions that ISO 8601 cannot
+     * itself represent - or otherwise inferred from the granularity of the start
+     * date. If no precision can be determined the key is left unset.
+     *
+     * @param node a mutable structured date sub-node
+     * @return the same node, with precision resolved and temporary keys removed
+     */
+    private static Map<String, Object> normaliseStructuredDate(Map<String, Object> node) {
+        moveIfPresent(node, START_STANDARD_DATE, Ontology.DATE_PERIOD_START_DATE);
+        moveIfPresent(node, END_STANDARD_DATE, Ontology.DATE_PERIOD_END_DATE);
+
+        Optional<DatePeriod.DatePrecision> precision = parsePrecision(node.get(Ontology.DATE_PERIOD_PRECISION));
+        if (!precision.isPresent()) {
+            precision = inferPrecision(node.get(Ontology.DATE_PERIOD_START_DATE));
+        }
+        if (precision.isPresent()) {
+            node.put(Ontology.DATE_PERIOD_PRECISION, precision.get().name());
+        } else {
+            node.remove(Ontology.DATE_PERIOD_PRECISION);
+        }
+        return node;
+    }
+
+    private static void moveIfPresent(Map<String, Object> node, String from, String to) {
+        Object value = node.remove(from);
+        if (value != null) {
+            node.put(to, value);
+        }
+    }
+
+    /**
+     * Resolve a date precision, preferring an explicit value (e.g. from an EAD3
+     * {@code @localtype}) and otherwise inferring it from the granularity of an
+     * ISO 8601 date - a plain year, a year-month, or a full year-month-day.
+     * Unrecognised values yield an empty result.
+     */
+    private static Optional<DatePeriod.DatePrecision> parsePrecision(Object value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(DatePeriod.DatePrecision.valueOf(value.toString().trim()));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<DatePeriod.DatePrecision> inferPrecision(Object date) {
+        if (date == null) {
+            return Optional.empty();
+        }
+        Matcher m = ISO_DATE.matcher(date.toString().trim());
+        if (!m.matches()) {
+            return Optional.empty();
+        } else if (m.group(3) != null) {
+            return Optional.of(DatePeriod.DatePrecision.day);
+        } else if (m.group(2) != null) {
+            return Optional.of(DatePeriod.DatePrecision.month);
+        }
+        return Optional.of(DatePeriod.DatePrecision.year);
     }
 
     private static Map<String, String> returnDatesAsString(Map<String, Object> data) {
