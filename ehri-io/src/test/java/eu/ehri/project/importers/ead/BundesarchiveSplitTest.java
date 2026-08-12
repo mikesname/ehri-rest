@@ -95,8 +95,8 @@ public class BundesarchiveSplitTest extends AbstractImporterTest {
         // strings now and not DatePeriods)
         for (DocumentaryUnitDescription d : archUnit.getDocumentDescriptions()) {
             // Single date is not parsable as a range or year
-            String unitDates = d.getProperty("unitDates");
-            assertNotNull(unitDates);
+            List<String> unitDates = d.getProperty("unitDates");
+            assertFalse(unitDates.isEmpty());
             List<DatePeriod> datePeriods = Lists.newArrayList(d.getDatePeriods());
             assertEquals(0, datePeriods.size());
         }

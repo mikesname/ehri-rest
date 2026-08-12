@@ -37,6 +37,7 @@ import java.util.Collections;
 
 import static com.sun.jersey.api.client.ClientResponse.Status.OK;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 
@@ -175,6 +176,44 @@ public class ToolsResourceClientTest extends AbstractResourceClientTest {
                 ImmutableList.of("c3", "nl-r1-c1-test1-test2")), out.rows());
     }
 
+
+    @Test
+    public void testCheckDatesReportsUnparsableDates() throws Exception {
+        // The cd1-2 fixture description has no date periods and a unitDates
+        // property holding one parseable range and one unparseable value.
+        WebResource resource = client.resource(ehriUri(ToolsResource.ENDPOINT, "check-dates"));
+        ClientResponse response = resource
+                .header(AbstractResource.AUTH_HEADER_NAME, getAdminUserProfileId())
+                .header("Accept", "text/csv")
+                .post(ClientResponse.class);
+        String out = response.getEntity(String.class);
+        assertStatus(OK, response);
+        // The unparseable value is reported, the parseable range is not.
+        assertTrue(out.contains("not a date"));
+        assertFalse(out.contains("1943-1946"));
+    }
+
+    @Test
+    public void testCheckDatesCommitCreatesDatePeriods() throws Exception {
+        // With commit, the parseable date is attached to the description as a
+        // DatePeriod (the unparseable value is still reported).
+        ClientResponse commit = client.resource(ehriUri(ToolsResource.ENDPOINT, "check-dates"))
+                .queryParam("commit", "true")
+                .header(AbstractResource.AUTH_HEADER_NAME, getAdminUserProfileId())
+                .header("Accept", "text/csv")
+                .post(ClientResponse.class);
+        assertStatus(OK, commit);
+        assertTrue(commit.getEntity(String.class).contains("not a date"));
+
+        // A second (report) pass no longer treats the description as date-less,
+        // so nothing is reported - proving the date period was persisted.
+        ClientResponse report = client.resource(ehriUri(ToolsResource.ENDPOINT, "check-dates"))
+                .header(AbstractResource.AUTH_HEADER_NAME, getAdminUserProfileId())
+                .header("Accept", "text/csv")
+                .post(ClientResponse.class);
+        assertStatus(OK, report);
+        assertFalse(report.getEntity(String.class).contains("not a date"));
+    }
 
     @Test
     public void testReparent() throws Exception {

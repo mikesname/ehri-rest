@@ -296,6 +296,9 @@
           name: Documentary Unit 1
           languageCode: eng
           scopeAndContent: Some alternate description text for c1
+          unitDates:
+            - "1943-1946"
+            - not a date
     heldBy: r1
     hasPermissionScope: r1
     access:

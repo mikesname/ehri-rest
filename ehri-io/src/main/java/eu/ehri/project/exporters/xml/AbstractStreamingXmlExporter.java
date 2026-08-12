@@ -19,11 +19,11 @@
 
 package eu.ehri.project.exporters.xml;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import eu.ehri.project.models.base.Entity;
+import eu.ehri.project.utils.ValueUtils;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -69,8 +69,7 @@ public abstract class AbstractStreamingXmlExporter<E extends Entity>
     }
 
     protected List<Object> coerceList(Object value) {
-        return value == null ? ImmutableList.of()
-                : (value instanceof List ? (List<Object>) value : ImmutableList.of(value));
+        return ValueUtils.coerceList(value);
     }
 
     protected String resourceAsString(String resourceName) {
