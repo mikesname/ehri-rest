@@ -60,7 +60,7 @@
 			<abstract label="Abstract:">Some t1 Text Here</abstract>
 			<didnote label="Note:">Information about the collection.</didnote>
 			<langmaterial label="Language:">
-				<language langcode="eng">English</language>
+				<language langcode="eng" script="Latn">English</language>
 				<descriptivenote>
 					<p>Materials in this collection are written in English.</p>
 				</descriptivenote>

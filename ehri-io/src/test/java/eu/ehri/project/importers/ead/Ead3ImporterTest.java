@@ -20,12 +20,14 @@
 package eu.ehri.project.importers.ead;
 
 import eu.ehri.project.importers.base.AbstractImporterTest;
+import eu.ehri.project.models.DocumentaryUnitDescription;
 import org.junit.Test;
 
 import java.io.InputStream;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 
 public class Ead3ImporterTest extends AbstractImporterTest {
@@ -57,5 +59,9 @@ public class Ead3ImporterTest extends AbstractImporterTest {
          *  - 1 unknown properties
          */
         assertEquals(origCount + 21, getNodeCount(graph));
+
+        DocumentaryUnitDescription desc = manager.getEntity("nl-r1-t1-c1.eng-test_1_eng", DocumentaryUnitDescription.class);
+        assertNotNull(desc);
+        assertEquals("Latn", desc.getProperty("scriptOfMaterial"));
     }
 }
