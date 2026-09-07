@@ -322,7 +322,7 @@ public class AbstractAccessibleResource<E extends Accessible> extends AbstractRe
                     ZipEntry zipEntry = new ZipEntry(item.getId() + ".xml");
                     zipEntry.setComment("Exported from the EHRI portal at " + (DateTime.now()));
                     zos.putNextEntry(zipEntry);
-                    exporter.get().export(item, zos, lang);
+                    exporter.get().export(item, zos, lang, null);
                     zos.closeEntry();
                 }
                 tx.success();

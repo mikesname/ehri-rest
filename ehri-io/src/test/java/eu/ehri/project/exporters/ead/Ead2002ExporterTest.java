@@ -42,7 +42,7 @@ import static eu.ehri.project.test.XmlTestHelpers.validatesSchema;
 
 public class Ead2002ExporterTest extends XmlExporterTest {
 
-    private static ResourceBundle i18n = ResourceBundle.getBundle(Ead2002Exporter.class.getName());
+    private static final ResourceBundle i18n = ResourceBundle.getBundle(Ead2002Exporter.class.getName());
 
     @Test
     public void testExport1() throws Exception {
@@ -60,6 +60,18 @@ public class Ead2002ExporterTest extends XmlExporterTest {
         Document doc = parseDocument(xml);
         assertXPath(doc, "A link indicated that r4 is the original location of c4",
                 "//ead/archdesc/originalsloc/p");
+    }
+
+    @Test
+    public void testExportWithDescriptionCode() throws Exception {
+        // The "c1" fixture item has two eng-language descriptions,
+        // with codes "c1-desc" and "c1-desc2"
+        DocumentaryUnit c1 = manager.getEntity("c1", DocumentaryUnit.class);
+        Document defaultDoc = parseDocument(testExport(c1, "eng", null));
+        assertXPath(defaultDoc, "Some description text for c1", "//ead/archdesc/scopecontent/p");
+
+        Document withCodeDoc = parseDocument(testExport(c1, "eng", "c1-desc2"));
+        assertXPath(withCodeDoc, "Some alternate description text for c1", "//ead/archdesc/scopecontent/p");
     }
 
     @Test
@@ -180,9 +192,13 @@ public class Ead2002ExporterTest extends XmlExporterTest {
     }
 
     private String testExport(DocumentaryUnit unit, String lang) throws Exception {
+        return testExport(unit, lang, null);
+    }
+
+    private String testExport(DocumentaryUnit unit, String lang, String code) throws Exception {
         Ead2002Exporter exporter = new Ead2002Exporter(api(adminUser));
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            exporter.export(unit, baos, lang);
+            exporter.export(unit, baos, lang, code);
             String xml = baos.toString("UTF-8");
             isValidEad(xml);
             return xml;
@@ -200,7 +216,7 @@ public class Ead2002ExporterTest extends XmlExporterTest {
             DocumentaryUnit fonds = graph.frame(
                     getVertexByIdentifier(graph, topLevelIdentifier), DocumentaryUnit.class);
             Ead2002Exporter exporter = new Ead2002Exporter(api(adminUser));
-            exporter.export(fonds, baos, lang);
+            exporter.export(fonds, baos, lang, null);
             String xml = baos.toString("UTF-8");
             isValidEad(xml);
             return xml;

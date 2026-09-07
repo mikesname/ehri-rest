@@ -284,7 +284,8 @@ public class RepositoryResource extends AbstractAccessibleResource<Repository>
     @Path("{id:[^/]+}/eag")
     @Produces(MediaType.TEXT_XML)
     public Response exportEag(@PathParam("id") String id,
-                              final @QueryParam(LANG_PARAM) @DefaultValue(DEFAULT_LANG) String lang)
+                              final @QueryParam(LANG_PARAM) @DefaultValue(DEFAULT_LANG) String lang,
+                              final @QueryParam(CODE_PARAM) String code)
             throws ItemNotFound {
         try (final Tx tx = beginTx()) {
             checkExists(id, cls);
@@ -292,7 +293,7 @@ public class RepositoryResource extends AbstractAccessibleResource<Repository>
             return Response.ok((StreamingOutput) outputStream -> {
                 try (final Tx tx2 = beginTx()) {
                     Repository repository = manager.getEntityUnchecked(id, cls);
-                    new Eag2012Exporter(api()).export(repository, outputStream, lang);
+                    new Eag2012Exporter(api()).export(repository, outputStream, lang, code);
                     tx2.success();
                 }
             }).type(MediaType.TEXT_XML + "; charset=utf-8").build();

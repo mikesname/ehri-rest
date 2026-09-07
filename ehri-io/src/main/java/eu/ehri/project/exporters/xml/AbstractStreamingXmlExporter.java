@@ -46,10 +46,10 @@ public abstract class AbstractStreamingXmlExporter<E extends Entity>
     private static final XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newFactory();
 
     @Override
-    public Document export(E item, String langCode) throws IOException {
+    public Document export(E item, String langCode, String code) throws IOException {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            export(item, baos, langCode);
+            export(item, baos, langCode, code);
             return new DocumentReader().read(new ByteArrayInputStream(baos.toByteArray()));
         } catch (ParserConfigurationException | SAXException e) {
             throw new RuntimeException(e);
@@ -57,11 +57,11 @@ public abstract class AbstractStreamingXmlExporter<E extends Entity>
     }
 
     @Override
-    public void export(E unit, OutputStream outputStream, String langCode) throws IOException {
+    public void export(E unit, OutputStream outputStream, String langCode, String code) throws IOException {
         try (final IndentingXMLStreamWriter sw = new IndentingXMLStreamWriter(
                 xmlOutputFactory.createXMLStreamWriter(new BufferedOutputStream(outputStream)))) {
             sw.writeStartDocument();
-            export(sw, unit, langCode);
+            export(sw, unit, langCode, code);
             sw.writeEndDocument();
         } catch (XMLStreamException e) {
             throw new RuntimeException(e);

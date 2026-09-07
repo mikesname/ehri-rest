@@ -41,14 +41,8 @@ import javax.xml.stream.XMLStreamWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import static eu.ehri.project.exporters.ead.EadExporter.textFieldAttrs;
-import static eu.ehri.project.exporters.ead.EadExporter.getLevelAttrs;
-import static eu.ehri.project.exporters.ead.EadExporter.getEventDescription;
-import static eu.ehri.project.exporters.ead.EadExporter.getLangMaterialEntries;
-import static eu.ehri.project.exporters.ead.EadExporter.getLanguageOfMaterialNotes;
-import eu.ehri.project.exporters.ead.EadExporter.LangMaterialEntry;
-import static eu.ehri.project.exporters.ead.EadExporter.formatNormalDate;
-import static eu.ehri.project.exporters.ead.EadExporter.localDatePrecision;
+
+import static eu.ehri.project.exporters.ead.EadExporter.*;
 
 
 public class Ead3Exporter extends AbstractStreamingXmlExporter<DocumentaryUnit> implements EadExporter {
@@ -123,14 +117,14 @@ public class Ead3Exporter extends AbstractStreamingXmlExporter<DocumentaryUnit> 
     }
 
     @Override
-    public void export(XMLStreamWriter sw, DocumentaryUnit unit, String langCode) {
+    public void export(XMLStreamWriter sw, DocumentaryUnit unit, String langCode, String code) {
 
         root(sw, "ead", DEFAULT_NAMESPACE, attrs(), NAMESPACES, () -> {
             attribute(sw, "http://www.w3.org/2001/XMLSchema-instance",
                     "schemaLocation", DEFAULT_NAMESPACE);
 
             Optional<Repository> repoOpt = Optional.ofNullable(unit.getRepository());
-            Optional<Description> descOpt = LanguageHelpers.getBestDescription(unit, Optional.empty(), langCode);
+            Optional<Description> descOpt = LanguageHelpers.getBestDescription(unit, Optional.empty(), langCode, code);
             String title = descOpt.map(Description::getName).orElse(unit.getIdentifier());
 
             tag(sw, "control", attrs("relatedencoding", "DC",
@@ -179,7 +173,7 @@ public class Ead3Exporter extends AbstractStreamingXmlExporter<DocumentaryUnit> 
                     if (orderedChildren.iterator().hasNext()) {
                         tag(sw, "dsc", () -> {
                             for (DocumentaryUnit child : orderedChildren) {
-                                addEadLevel(sw, 1, child, descOpt, langCode);
+                                addEadLevel(sw, 1, child, descOpt, langCode, code);
                             }
                         });
                     }
@@ -191,7 +185,7 @@ public class Ead3Exporter extends AbstractStreamingXmlExporter<DocumentaryUnit> 
 
     private void addFileDesc(XMLStreamWriter sw, String langCode, Repository repository, Description desc) {
         tag(sw, "publicationstmt", () -> {
-            LanguageHelpers.getBestDescription(repository, Optional.empty(), langCode).ifPresent(repoDesc -> {
+            LanguageHelpers.getBestDescription(repository, langCode).ifPresent(repoDesc -> {
                 tag(sw, "publisher", repoDesc.getName());
                 for (Address address : repoDesc.as(RepositoryDescription.class).getAddresses()) {
                     tag(sw, "address", () -> {
@@ -277,7 +271,7 @@ public class Ead3Exporter extends AbstractStreamingXmlExporter<DocumentaryUnit> 
     }
 
     private void addRepositoryInfo(XMLStreamWriter sw, String langCode, Repository repo) {
-        LanguageHelpers.getBestDescription(repo, Optional.empty(), langCode)
+        LanguageHelpers.getBestDescription(repo, langCode)
                 .ifPresent(repoDesc ->
                     tag(sw, path("repository", "corpname", "part"), repoDesc.getName()));
     }
@@ -352,10 +346,9 @@ public class Ead3Exporter extends AbstractStreamingXmlExporter<DocumentaryUnit> 
         }
     }
 
-    private void addEadLevel(XMLStreamWriter sw, int num, DocumentaryUnit subUnit,
-                             Optional<Description> priorDescOpt, String langCode) {
+    private void addEadLevel(XMLStreamWriter sw, int num, DocumentaryUnit subUnit, Optional<Description> priorDescOpt, String langCode, String code) {
         logger.trace("Adding EAD sublevel: c{}", num);
-        Optional<Description> descOpt = LanguageHelpers.getBestDescription(subUnit, priorDescOpt, langCode);
+        Optional<Description> descOpt = LanguageHelpers.getBestDescription(subUnit, priorDescOpt, langCode, code);
         String levelTag = String.format("c%02d", num);
         tag(sw, levelTag, getLevelAttrs(descOpt, null), () -> {
             descOpt.ifPresent(desc -> {
@@ -365,7 +358,7 @@ public class Ead3Exporter extends AbstractStreamingXmlExporter<DocumentaryUnit> 
             });
 
             for (DocumentaryUnit child : EadExporter.getOrderedChildren(api, subUnit)) {
-                addEadLevel(sw, num + 1, child, descOpt, langCode);
+                addEadLevel(sw, num + 1, child, descOpt, langCode, code);
             }
         });
     }

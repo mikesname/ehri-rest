@@ -42,14 +42,14 @@ public interface OaiPmhRenderer {
      * @param langCode the language code to prefer
      * @return a renderer object
      */
-    static OaiPmhRenderer defaultRenderer(Api api, String langCode) {
+    static OaiPmhRenderer defaultRenderer(Api api, String langCode, String code) {
         return (w, mp, item) -> {
             if (MetadataPrefix.ead.equals(mp)) {
-                new Ead2002Exporter(api).export(w, item, langCode);
+                new Ead2002Exporter(api).export(w, item, langCode, code);
             } else if (MetadataPrefix.ead3.equals(mp)) {
-                new Ead3Exporter(api).export(w, item, langCode);
+                new Ead3Exporter(api).export(w, item, langCode, code);
             } else {
-                new DublinCore11Exporter(api).export(w, item, langCode);
+                new DublinCore11Exporter(api).export(w, item, langCode, code);
             }
         };
     }

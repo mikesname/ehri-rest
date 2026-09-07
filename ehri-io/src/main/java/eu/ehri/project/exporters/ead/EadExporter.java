@@ -57,9 +57,9 @@ public interface EadExporter extends XmlExporter<DocumentaryUnit> {
      * @param outputStream the output stream to write to.
      * @param langCode     the preferred language code when multiple
      *                     descriptions are available
+     * @param code         the description code, when multiple are available
      */
-    void export(DocumentaryUnit unit,
-                OutputStream outputStream, String langCode) throws IOException;
+    void export(DocumentaryUnit unit, OutputStream outputStream, String langCode, String code) throws IOException;
 
     /**
      * Export a documentary unit as an EAD document.
@@ -67,9 +67,10 @@ public interface EadExporter extends XmlExporter<DocumentaryUnit> {
      * @param unit     the unit
      * @param langCode the preferred language code when multiple
      *                 descriptions are available
+     * @param code     the description code, when multiple are available
      * @return a DOM document
      */
-    Document export(DocumentaryUnit unit, String langCode) throws IOException;
+    Document export(DocumentaryUnit unit, String langCode, String code) throws IOException;
 
     /**
      * Get the EAD tag name corresponding to a given creator access point. This
@@ -84,7 +85,7 @@ public interface EadExporter extends XmlExporter<DocumentaryUnit> {
             for (Entity target : link.getLinkTargets()) {
                 if (target.getType().equals(Entities.HISTORICAL_AGENT)) {
                     HistoricalAgent item = target.as(HistoricalAgent.class);
-                    Optional<Description> desc = LanguageHelpers.getBestDescription(item, Optional.empty(), langCode);
+                    Optional<Description> desc = LanguageHelpers.getBestDescription(item, langCode);
                     return desc.flatMap(d -> Optional.ofNullable(d.getProperty(Isaar.typeOfEntity.name())));
                 }
             }

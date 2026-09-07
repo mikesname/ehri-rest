@@ -34,9 +34,10 @@ public interface XmlExporter<T extends Entity> {
      * @param outputStream the output stream to write to.
      * @param langCode     the preferred language code when multiple
      *                     descriptions are available
+     * @param code         the description code, when multiple are available
      * @throws IOException if an error occurs writing to the output stream
      */
-    void export(T item, OutputStream outputStream, String langCode) throws IOException;
+    void export(T item, OutputStream outputStream, String langCode, String code) throws IOException;
 
     /**
      * Export an item as an XML document.
@@ -44,8 +45,9 @@ public interface XmlExporter<T extends Entity> {
      * @param item     the item
      * @param langCode the preferred language code when multiple
      *                 descriptions are available
+     * @param code     the description code, when multiple are available
      * @return a DOM document
      * @throws IOException if an error occurs creating the document
      */
-    Document export(T item, String langCode) throws IOException;
+    Document export(T item, String langCode, String code) throws IOException;
 }

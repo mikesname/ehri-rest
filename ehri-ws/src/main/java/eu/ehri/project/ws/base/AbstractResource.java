@@ -130,6 +130,7 @@ public abstract class AbstractResource implements TxCheckedResource {
     public static final String SCOPE_PARAM = "scope";
     public static final String TOLERANT_PARAM = "tolerant";
     public static final String LANG_PARAM = "lang";
+    public static final String CODE_PARAM = "code";
     public static final String COMMIT_PARAM = "commit";
 
     /**

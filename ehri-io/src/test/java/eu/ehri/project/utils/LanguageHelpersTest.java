@@ -19,6 +19,14 @@
 
 package eu.ehri.project.utils;
 
+import com.google.common.collect.ImmutableMap;
+import eu.ehri.project.definitions.Ontology;
+import eu.ehri.project.models.DocumentaryUnit;
+import eu.ehri.project.models.DocumentaryUnitDescription;
+import eu.ehri.project.models.EntityClass;
+import eu.ehri.project.models.base.Described;
+import eu.ehri.project.models.base.Description;
+import eu.ehri.project.test.AbstractFixtureTest;
 import org.junit.Test;
 
 import java.util.Optional;
@@ -26,7 +34,32 @@ import java.util.Optional;
 import static org.junit.Assert.*;
 
 
-public class LanguageHelpersTest {
+public class LanguageHelpersTest extends AbstractFixtureTest {
+
+    private DocumentaryUnitDescription addDescription(
+            String id, DocumentaryUnit unit, String descriptionCode, String langCode) throws Exception {
+        ImmutableMap.Builder<String, Object> data = ImmutableMap.<String, Object>builder()
+                .put(Ontology.NAME_KEY, "Test description " + id)
+                .put(Ontology.LANGUAGE_OF_DESCRIPTION, langCode);
+        if (descriptionCode != null) {
+            data.put(Ontology.IDENTIFIER_KEY, descriptionCode);
+        }
+        DocumentaryUnitDescription desc = graph.frame(
+                manager.createVertex(id, EntityClass.DOCUMENTARY_UNIT_DESCRIPTION, data.build()),
+                DocumentaryUnitDescription.class);
+        if (unit != null) {
+            unit.addDescription(desc);
+        }
+        return desc;
+    }
+
+    private static String bestId(Described item, Optional<Description> prior, String langCode, String code) {
+        return LanguageHelpers.getBestDescription(item, prior, langCode, code).map(Description::getId).orElse(null);
+    }
+
+    private static String bestCode(Described item, Optional<Description> prior, String langCode, String code) {
+        return LanguageHelpers.getBestDescription(item, prior, langCode, code).map(Description::getDescriptionCode).orElse(null);
+    }
 
     @Test
     public void testIso639DashTwoCode() {
@@ -108,5 +141,30 @@ public class LanguageHelpersTest {
         assertEquals("United Kingdom", LanguageHelpers.countryCodeToName("gb"));
         assertEquals("France", LanguageHelpers.countryCodeToName("fr"));
         assertEquals("Kosovo", LanguageHelpers.countryCodeToName("xk"));
+    }
+
+    @Test
+    public void testGetBestDescriptionFallsBackToFirstWhenNoMatch() {
+        assertEquals("c1-desc", bestCode(item, Optional.empty(), "deu", "no-such-code"));
+    }
+
+    @Test
+    public void testGetBestDescriptionMatchesGivenCode() throws Exception {
+        DocumentaryUnitDescription other = addDescription("c1-desc-2", item, "other-code", "fra");
+        assertEquals(other.getId(), bestId(item, Optional.empty(), "eng", "other-code"));
+        assertEquals("c1-desc", bestCode(item, Optional.empty(), "eng", "OTHER-CODE"));
+    }
+
+    @Test
+    public void testGetBestDescriptionMatchesLanguageWhenNoCodeGiven() throws Exception {
+        DocumentaryUnitDescription french = addDescription("c1-desc-2", item, null, "fra");
+        assertEquals(french.getId(), bestId(item, Optional.empty(), "fra", "no-such-code"));
+    }
+
+    @Test
+    public void testGetBestDescriptionMatchesParentDescriptionCodeFirst() throws Exception {
+        DocumentaryUnitDescription matching = addDescription("c1-desc-2", item, "shared-code", "fra");
+        DocumentaryUnitDescription prior = addDescription("prior-desc", null, "shared-code", "eng");
+        assertEquals(matching.getId(), bestId(item, Optional.of(prior), "eng", "c1-desc"));
     }
 }

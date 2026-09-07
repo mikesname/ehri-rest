@@ -90,12 +90,12 @@ public final class Eac2010Exporter extends AbstractStreamingXmlExporter<Historic
     }
 
     @Override
-    public void export(XMLStreamWriter sw, HistoricalAgent agent, String langCode) {
+    public void export(XMLStreamWriter sw, HistoricalAgent agent, String langCode, String code) {
         comment(sw, resourceAsString("export-boilerplate.txt"));
         root(sw, "eac-cpf", DEFAULT_NAMESPACE, attrs(), NAMESPACES, () -> {
             attribute(sw, "http://www.w3.org/2001/XMLSchema-instance",
                     "schemaLocation", DEFAULT_NAMESPACE + "http://eac.staatsbibliothek-berlin.de/schema/cpf.xsd");
-            LanguageHelpers.getBestDescription(agent, Optional.empty(), langCode).ifPresent(desc -> {
+            LanguageHelpers.getBestDescription(agent, Optional.empty(), langCode, code).ifPresent(desc -> {
 
                 addControlSection(sw, agent, desc);
 
