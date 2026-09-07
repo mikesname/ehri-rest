@@ -25,13 +25,8 @@ import eu.ehri.project.importers.ead.EadHandler;
 import eu.ehri.project.importers.ead.EadImporter;
 import eu.ehri.project.importers.links.LinkResolver;
 import eu.ehri.project.importers.managers.SaxImportManager;
-import eu.ehri.project.models.DatePeriod;
-import eu.ehri.project.models.DocumentaryUnit;
-import eu.ehri.project.models.DocumentaryUnitDescription;
-import eu.ehri.project.models.HistoricalAgent;
-import eu.ehri.project.models.Repository;
+import eu.ehri.project.models.*;
 import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
@@ -241,7 +236,7 @@ public class Ead3ExporterTest extends XmlExporterTest {
 
         Ead3Exporter exporter = new Ead3Exporter(api(adminUser));
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exporter.export(unit, baos, "eng");
+        exporter.export(unit, baos, "eng", null);
         String xml = baos.toString("UTF-8");
         isValidEad(xml);
         Document doc = parseDocument(xml);
@@ -256,7 +251,7 @@ public class Ead3ExporterTest extends XmlExporterTest {
     private String testExport(DocumentaryUnit unit, String lang) throws Exception {
         Ead3Exporter exporter = new Ead3Exporter(api(adminUser));
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exporter.export(unit, baos, lang);
+        exporter.export(unit, baos, lang, null);
         String xml = baos.toString("UTF-8");
 //        System.out.println(xml);
         isValidEad(xml);
@@ -274,7 +269,7 @@ public class Ead3ExporterTest extends XmlExporterTest {
                 getVertexByIdentifier(graph, topLevelIdentifier), DocumentaryUnit.class);
         Ead3Exporter exporter = new Ead3Exporter(api(adminUser));
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exporter.export(fonds, baos, lang);
+        exporter.export(fonds, baos, lang, null);
         String xml = baos.toString("UTF-8");
         isValidEad(xml);
         return xml;

@@ -215,7 +215,8 @@ public class DocumentaryUnitResource
     public Response exportEad(
             final @PathParam("id") String id,
             final @PathParam("fmt") @DefaultValue("ead") String fmt,
-            final @QueryParam(LANG_PARAM) @DefaultValue(DEFAULT_LANG) String lang)
+            final @QueryParam(LANG_PARAM) @DefaultValue(DEFAULT_LANG) String lang,
+            final @QueryParam(CODE_PARAM) String code)
             throws ItemNotFound {
         try (final Tx tx = beginTx()) {
             checkExists(id, cls);
@@ -227,7 +228,7 @@ public class DocumentaryUnitResource
                     final EadExporter exporter = fmt.equals("ead")
                             ? new Ead2002Exporter(api)
                             : new Ead3Exporter(api);
-                    exporter.export(unit, outputStream, lang);
+                    exporter.export(unit, outputStream, lang, code);
                     tx2.success();
                 }
             }).type(MediaType.TEXT_XML + "; charset=utf-8").build();

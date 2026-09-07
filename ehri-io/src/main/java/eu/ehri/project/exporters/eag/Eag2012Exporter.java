@@ -82,7 +82,7 @@ public final class Eag2012Exporter extends AbstractStreamingXmlExporter<Reposito
     }
 
     @Override
-    public void export(XMLStreamWriter sw, Repository repository, String langCode) {
+    public void export(XMLStreamWriter sw, Repository repository, String langCode, String code) {
 
         comment(sw, resourceAsString("export-boilerplate.txt"));
 
@@ -93,7 +93,7 @@ public final class Eag2012Exporter extends AbstractStreamingXmlExporter<Reposito
             attribute(sw, "http://www.w3.org/2001/XMLSchema-instance", "schemaLocation",
                     DEFAULT_NAMESPACE + " http://schemas.archivesportaleurope.net/profiles/eag.xsd");
 
-            LanguageHelpers.getBestDescription(repository, Optional.empty(), langCode).ifPresent(desc -> {
+            LanguageHelpers.getBestDescription(repository, Optional.empty(), langCode, code).ifPresent(desc -> {
 
                 addControlSection(sw, repository, country, desc);
 

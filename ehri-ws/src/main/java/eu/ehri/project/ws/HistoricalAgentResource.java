@@ -100,7 +100,8 @@ public class HistoricalAgentResource extends AbstractAccessibleResource<Historic
     @Path("{id:[^/]+}/eac")
     @Produces(MediaType.TEXT_XML)
     public Response exportEac(@PathParam("id") String id,
-                              final @QueryParam(LANG_PARAM) @DefaultValue(DEFAULT_LANG) String lang)
+                              final @QueryParam(LANG_PARAM) @DefaultValue(DEFAULT_LANG) String lang,
+                              final @QueryParam(CODE_PARAM) String code)
             throws ItemNotFound {
         try (final Tx tx = beginTx()) {
             checkExists(id, cls);
@@ -108,7 +109,7 @@ public class HistoricalAgentResource extends AbstractAccessibleResource<Historic
             return Response.ok((StreamingOutput) outputStream -> {
                 try (final Tx tx2 = beginTx()) {
                     HistoricalAgent agent = manager.getEntityUnchecked(id, cls);
-                    new Eac2010Exporter(api()).export(agent, outputStream, lang);
+                    new Eac2010Exporter(api()).export(agent, outputStream, lang, code);
                     tx2.success();
                 }
             }).type(MediaType.TEXT_XML + "; charset=utf-8").build();

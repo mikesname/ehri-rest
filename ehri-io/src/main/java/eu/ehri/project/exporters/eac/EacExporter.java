@@ -38,9 +38,9 @@ public interface EacExporter extends XmlExporter<HistoricalAgent> {
      * @param outputStream the output stream to write to.
      * @param langCode     the preferred language code when multiple
      *                     descriptions are available
+     * @param code     the description code, when multiple are available
      */
-    void export(HistoricalAgent agent,
-                OutputStream outputStream, String langCode) throws IOException;
+    void export(HistoricalAgent agent, OutputStream outputStream, String langCode, String code) throws IOException;
 
     /**
      * Export a historical agent as an EAC document.
@@ -48,7 +48,8 @@ public interface EacExporter extends XmlExporter<HistoricalAgent> {
      * @param agent    the historical agent
      * @param langCode the preferred language code when multiple
      *                 descriptions are available
+     * @param code     the description code, when multiple are available
      * @return a DOM document
      */
-    Document export(HistoricalAgent agent, String langCode) throws IOException;
+    Document export(HistoricalAgent agent, String langCode, String code) throws IOException;
 }

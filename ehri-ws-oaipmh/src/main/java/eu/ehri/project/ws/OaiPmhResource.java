@@ -88,7 +88,7 @@ public class OaiPmhResource extends AbstractResource {
                 Api api = anonymousApi();
                 OaiPmhExporter oaiPmh = new OaiPmhExporter(
                         OaiPmhData.create(api),
-                        OaiPmhRenderer.defaultRenderer(api, lang),
+                        OaiPmhRenderer.defaultRenderer(api, lang, null),
                         config);
                 try {
                     OaiPmhState state = OaiPmhState.parse(uriInfo.getRequestUri().getQuery(), limit);

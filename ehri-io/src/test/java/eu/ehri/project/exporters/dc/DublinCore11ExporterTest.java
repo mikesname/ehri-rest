@@ -73,7 +73,7 @@ public class DublinCore11ExporterTest extends XmlExporterTest {
     private String testExport(Accessible item, String lang) throws Exception {
         DublinCoreExporter exporter = new DublinCore11Exporter(api(adminUser));
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exporter.export(item.as(Described.class), baos, lang);
+        exporter.export(item.as(Described.class), baos, lang, null);
         String xml = baos.toString("UTF-8");
         // System.out.println(xml);
         isValidDc(xml);

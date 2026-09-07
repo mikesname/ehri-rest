@@ -108,7 +108,7 @@ public class Eag2012ExporterTest extends XmlExporterTest {
     private String testExport(Repository repository, String lang) throws Exception {
         Eag2012Exporter exporter = new Eag2012Exporter(api(adminUser));
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            exporter.export(repository, baos, lang);
+            exporter.export(repository, baos, lang, null);
             String xml = baos.toString("UTF-8");
             //System.out.println(xml);
             isValidEag(xml);

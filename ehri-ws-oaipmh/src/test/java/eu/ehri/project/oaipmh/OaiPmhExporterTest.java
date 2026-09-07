@@ -293,7 +293,7 @@ public class OaiPmhExporterTest extends XmlExporterTest {
                 xmlOutputFactory.createXMLStreamWriter(new BufferedOutputStream(out)))) {
             Api api = anonApi();
             OaiPmhExporter oaiPmh = new OaiPmhExporter(OaiPmhData.create(api, true),
-                    OaiPmhRenderer.defaultRenderer(api, DEFAULT_LANG_CODE), ConfigFactory.load());
+                    OaiPmhRenderer.defaultRenderer(api, DEFAULT_LANG_CODE, null), ConfigFactory.load());
             try {
                 OaiPmhState state = OaiPmhState.parse(params, limit);
                 oaiPmh.performVerb(sw, state);

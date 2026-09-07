@@ -32,6 +32,7 @@ public interface StreamingXmlExporter<T> {
      * @param sw the stream writer instance
      * @param item the item
      * @param langCode the required language code
+     * @param code     the description code, when multiple are available
      */
-    void export(XMLStreamWriter sw, T item, String langCode);
+    void export(XMLStreamWriter sw, T item, String langCode, String code);
 }

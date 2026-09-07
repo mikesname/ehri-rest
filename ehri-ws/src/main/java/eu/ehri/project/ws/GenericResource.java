@@ -518,13 +518,14 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
     @Path("{id:[^/]+}/dc")
     @Produces(MediaType.TEXT_XML)
     public Document exportDc(
-            @PathParam("id") String id,
-            @QueryParam("lang") String langCode)
+            @PathParam(ID_PARAM) String id,
+            @QueryParam(LANG_PARAM) @DefaultValue(DEFAULT_LANG) String langCode,
+            @QueryParam(CODE_PARAM) String code)
             throws ItemNotFound, IOException {
         try (final Tx tx = beginTx()) {
             Described item = api().get(id, Described.class);
             DublinCoreExporter exporter = new DublinCore11Exporter(api());
-            Document doc = exporter.export(item, langCode);
+            Document doc = exporter.export(item, langCode, code);
             tx.success();
             return doc;
         }

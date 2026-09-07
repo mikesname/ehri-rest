@@ -531,55 +531,14 @@ public class LanguageHelpers {
             .put("ZW", "AF")
             .build();
 
-    public static Optional<String> countryCodeToContinent(String countryCode) {
-        String continentCode = countryCodesToContinents.get(countryCode.toUpperCase());
-        if (continentCode != null) {
-            return Optional.ofNullable(continentCodes.get(continentCode));
-        }
-        return Optional.empty();
-    }
-
     /**
-     * Get the best description for a given language code.
+     * Convert a 2- or 3-letter ISO 639 language code to its ISO 639-2
+     * (terminology) 3-letter form.
      *
-     * @param item         a described item
-     * @param priorDescOpt if the object is hierarchical, the parent-level
-     *                     description
-     * @param langCode     a 3-letter language code.
-     * @return the best matching description found
+     * @param twoOrThree a 2- or 3-letter language code
+     * @return the equivalent ISO 639-2 code, or empty if the code was
+     * null or not recognised
      */
-    public static Optional<Description> getBestDescription(Described item, Optional<Description> priorDescOpt, String langCode) {
-        List<Description> descriptions = Lists.newArrayList(item.getDescriptions());
-        descriptions.sort(Comparator.comparing(Entity::getId));
-        Description fallBack = null;
-        for (Description description : descriptions) {
-            if (fallBack == null) {
-                fallBack = description;
-            }
-            // First of all, check the description code (usually set to the
-            // EAD file ID.) If this is the same as the parent, return the
-            // current description.
-            for (Description parent : priorDescOpt.map(Collections::singleton).orElse(Collections.emptySet())) {
-                for (String code : Optional.ofNullable(parent.getDescriptionCode())
-                        .map(Collections::singleton).orElse(Collections.emptySet())) {
-                    if (code.equals(description.getDescriptionCode())) {
-                        return Optional.of(description);
-                    }
-                }
-            }
-
-            // Otherwise, fall back to the first one with the same language
-            if (description.getLanguageOfDescription().equalsIgnoreCase(langCode)) {
-                return Optional.of(description);
-            }
-        }
-        return Optional.ofNullable(fallBack);
-    }
-
-    public static Optional<Description> getBestDescription(Described item, String langCode) {
-        return getBestDescription(item, Optional.empty(), langCode);
-    }
-
     public static Optional<String> convertCode(String twoOrThree) {
         if (twoOrThree == null) {
             return Optional.empty();
@@ -588,7 +547,7 @@ public class LanguageHelpers {
         if (twoOrThree.length() == 2 && locale2To3Map.containsKey(twoOrThree)) {
             return Optional.of(locale2To3Map.get(twoOrThree).getISO3Language());
         } else if (twoOrThree.length() == 3 && iso639BibTermLookup.containsKey(twoOrThree)) {
-            return Optional.of(iso639BibTermLookup.get(twoOrThree));
+            return Optional.ofNullable(iso639BibTermLookup.get(twoOrThree));
         } else if (locale3To2Map.containsKey(codeLower)) {
             return Optional.of(codeLower);
         }
@@ -617,7 +576,7 @@ public class LanguageHelpers {
         if (nameOrCode.length() == 2 && locale2To3Map.containsKey(nameOrCode)) {
             return Optional.of(locale2To3Map.get(nameOrCode).getISO3Language());
         } else if (nameOrCode.length() == 3 && iso639BibTermLookup.containsKey(nameOrCode)) {
-            return Optional.of(iso639BibTermLookup.get(nameOrCode));
+            return Optional.ofNullable(iso639BibTermLookup.get(nameOrCode));
         } else if (nameOrCode.length() == 3 && locale3To2Map.containsKey(nameOrCode.toLowerCase())) {
             // locale3To2Map keys are always lowercase (from Locale.getISO3Language()); match
             // convertCode()'s case-insensitive handling of already-valid 3-letter codes.
@@ -695,6 +654,20 @@ public class LanguageHelpers {
     }
 
     /**
+     * Get the continent name for a given ISO 3166-1 country code.
+     *
+     * @param countryCode the 2-letter country code
+     * @return the continent name, if the country code is recognised
+     */
+    public static Optional<String> countryCodeToContinent(String countryCode) {
+        String continentCode = countryCodesToContinents.get(countryCode.toUpperCase());
+        if (continentCode != null) {
+            return Optional.ofNullable(continentCodes.get(continentCode));
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Convert an ISO 15924 script code to its (English) name.
      *
      * @param code the 4-letter script code
@@ -714,5 +687,85 @@ public class LanguageHelpers {
         return scriptCodesToNames.containsValue(scriptName)
                 ? Optional.ofNullable(scriptCodesToNames.inverse().get(scriptName))
                 : Optional.empty();
+    }
+
+    /**
+     * Get the best description for a given language and/or description code.
+     *
+     * @param item         a described item
+     * @param priorDescOpt if the object is hierarchical, the parent-level
+     *                     description
+     * @param langCode     a 3-letter language code.
+     * @param code         an optional description code.
+     * @return the best matching description found
+     */
+    public static Optional<Description> getBestDescription(Described item, Optional<Description> priorDescOpt, String langCode, String code) {
+        List<Description> descriptions = Lists.newArrayList(item.getDescriptions());
+        descriptions.sort(Comparator.comparing(Entity::getId));
+
+        // First of all, check the description code (usually set to the
+        // EAD file ID.) If this is the same as the parent, return the
+        // current description.
+        Optional<String> parentCode = priorDescOpt.map(Description::getDescriptionCode);
+        if (parentCode.isPresent()) {
+            Optional<Description> match = findByCode(descriptions, parentCode.get());
+            if (match.isPresent()) {
+                return match;
+            }
+        }
+
+        // Next, check the description code: if it's the same as given, return that
+        if (code != null) {
+            Optional<Description> match = findByCode(descriptions, code);
+            if (match.isPresent()) {
+                return match;
+            }
+        }
+
+        // Otherwise, fall back to the first one with the same language
+        Optional<Description> langMatch = descriptions.stream()
+                .filter(d -> d.getLanguageOfDescription().equalsIgnoreCase(langCode))
+                .findFirst();
+        if (langMatch.isPresent()) {
+            return langMatch;
+        }
+
+        return descriptions.stream().findFirst();
+    }
+
+    /**
+     * Get the best description for a given language and/or description code,
+     * with no parent-level description to compare against.
+     *
+     * @param item     a described item
+     * @param langCode a 3-letter language code.
+     * @param code     an optional description code.
+     * @return the best matching description found
+     * @see #getBestDescription(Described, Optional, String, String)
+     */
+    public static Optional<Description> getBestDescription(Described item, String langCode, String code) {
+        return getBestDescription(item, Optional.empty(), langCode, code);
+    }
+
+    /**
+     * Get the best description for a given language, with no description
+     * code or parent-level description to compare against.
+     *
+     * @param item     a described item
+     * @param langCode a 3-letter language code.
+     * @return the best matching description found
+     * @see #getBestDescription(Described, Optional, String, String)
+     */
+    public static Optional<Description> getBestDescription(Described item, String langCode) {
+        return getBestDescription(item, Optional.empty(), langCode, null);
+    }
+
+    /**
+     * Find the first description whose description code matches the given code.
+     */
+    private static Optional<Description> findByCode(List<Description> descriptions, String code) {
+        return descriptions.stream()
+                .filter(d -> code.equals(d.getDescriptionCode()))
+                .findFirst();
     }
 }

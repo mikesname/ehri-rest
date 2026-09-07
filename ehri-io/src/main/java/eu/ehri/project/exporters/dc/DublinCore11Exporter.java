@@ -85,7 +85,7 @@ public class DublinCore11Exporter extends AbstractStreamingXmlExporter<Described
     }
 
     @Override
-    public void export(XMLStreamWriter sw, Described item, String langCode) {
+    public void export(XMLStreamWriter sw, Described item, String langCode, String code) {
         root(sw, "oai_dc:dc", OAI_NS, attrs(), NAMESPACES, () -> {
             attribute(sw, "http://www.w3.org/2001/XMLSchema-instance",
                     "schemaLocation", OAI_NS + " http://www.openarchives.org/OAI/2.0/oai_dc.xsd");
@@ -96,7 +96,7 @@ public class DublinCore11Exporter extends AbstractStreamingXmlExporter<Described
                     String.format("%s%s", config.getString("io.pids.prefix"), pid)));
 
             Optional<Description> descOpt = LanguageHelpers
-                    .getBestDescription(item, Optional.empty(), langCode);
+                    .getBestDescription(item, Optional.empty(), langCode, code);
 
             descOpt.ifPresent(desc -> {
                 String langCode639_1 = LanguageHelpers.iso639DashOneCode(desc.getLanguageOfDescription());
