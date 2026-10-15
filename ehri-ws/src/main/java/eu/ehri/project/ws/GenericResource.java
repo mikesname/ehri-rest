@@ -54,6 +54,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -356,17 +357,21 @@ public class GenericResource extends AbstractAccessibleResource<Accessible> {
     /**
      * Returns a list of items linked to the given description.
      *
-     * @param id the item ID
+     * @param id      the item ID
+     * @param context optional ID of a virtual unit, restricting the
+     *                list to links made in its context
      * @return a list of links with the item as a target
      * @throws ItemNotFound if the item does not exist
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("{id:[^/]+}/links")
-    public Response links(@PathParam("id") String id) throws ItemNotFound {
+    public Response links(@PathParam("id") String id, @QueryParam("context") String context)
+            throws ItemNotFound {
         try (final Tx tx = beginTx()) {
             checkExists(id, Linkable.class);
-            Response page = streamingPage(() -> getQuery().page(api().getLinks(id), Link.class));
+            Response page = streamingPage(() -> getQuery()
+                    .page(api().getLinks(id, Optional.ofNullable(context)), Link.class));
             tx.success();
             return page;
         }

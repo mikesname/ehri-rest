@@ -38,6 +38,7 @@ import eu.ehri.project.models.Annotation;
 import eu.ehri.project.models.Country;
 import eu.ehri.project.models.EntityClass;
 import eu.ehri.project.models.Link;
+import eu.ehri.project.models.VirtualUnit;
 import eu.ehri.project.models.annotations.EntityType;
 import eu.ehri.project.models.base.*;
 import eu.ehri.project.models.events.SystemEvent;
@@ -405,6 +406,29 @@ final class DataFetchers {
                         ? accessPoints
                         : Iterables.filter(accessPoints, ap -> hasAccessPointType(ap, types));
             }).get(env);
+        };
+    }
+
+    DataFetcher<Iterable<Entity>> linksDataFetcher() {
+        return env -> {
+            String context = env.getArgument(CONTEXT_PARAM);
+            return oneToManyRelationshipFetcher(r -> {
+                Iterable<Link> links = r.as(Linkable.class).getLinks();
+                return context == null
+                        ? links
+                        : Iterables.filter(links, link -> {
+                            VirtualUnit linkContext = link.getLinkContext();
+                            return linkContext != null && context.equals(linkContext.getId());
+                        });
+            }).get(env);
+        };
+    }
+
+    DataFetcher<String> linkContextIdDataFetcher() {
+        return env -> {
+            Entity context = manyToOneRelationshipFetcher(
+                    a -> a.as(Link.class).getLinkContext()).get(env);
+            return context == null ? null : context.getId();
         };
     }
 

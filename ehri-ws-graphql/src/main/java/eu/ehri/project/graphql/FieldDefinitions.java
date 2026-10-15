@@ -286,7 +286,12 @@ final class FieldDefinitions {
 
     static final GraphQLFieldDefinition.Builder linkFieldDefinition =
             listFieldDefinition("links", __("graphql.field.links.description"),
-                    GraphQLTypeReference.typeRef(Entities.LINK));
+                    GraphQLTypeReference.typeRef(Entities.LINK))
+                    .argument(newArgument()
+                            .name(CONTEXT_PARAM)
+                            .description(__("graphql.argument.links.context.description"))
+                            .type(GraphQLID)
+                            .build());
 
     static final GraphQLFieldDefinition.Builder annotationsFieldDefinition =
             listFieldDefinition("annotations", __("graphql.field.annotations.description"),

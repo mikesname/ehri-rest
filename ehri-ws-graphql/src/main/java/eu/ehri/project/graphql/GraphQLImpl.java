@@ -144,8 +144,7 @@ public class GraphQLImpl {
                                 fetchers.oneToManyRelationshipFetcher(r -> r.as(Addressable.class).getAddresses()));
                         break;
                     case "links":
-                        builder.dataFetcher(coordinates(type, field),
-                                fetchers.oneToManyRelationshipFetcher(r -> r.as(Linkable.class).getLinks()));
+                        builder.dataFetcher(coordinates(type, field), fetchers.linksDataFetcher());
                         break;
                     case "annotations":
                         builder.dataFetcher(coordinates(type, field),
@@ -237,6 +236,9 @@ public class GraphQLImpl {
 
         builder.dataFetcher(coordinates(types.linkType.getName(), "source"),
                 fetchers.manyToOneRelationshipFetcher(a -> a.as(Link.class).getLinkSource()));
+
+        builder.dataFetcher(coordinates(types.linkType.getName(), "contextId"),
+                fetchers.linkContextIdDataFetcher());
 
         builder.dataFetcher(coordinates(types.linkType.getName(), "linkType"),
                 keyDataFetcher(Ontology.LINK_HAS_TYPE));

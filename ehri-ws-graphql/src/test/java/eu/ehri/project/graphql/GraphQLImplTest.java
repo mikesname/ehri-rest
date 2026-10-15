@@ -35,9 +35,11 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class GraphQLImplTest extends AbstractFixtureTest {
@@ -206,6 +208,22 @@ public class GraphQLImplTest extends AbstractFixtureTest {
         List<String> ids = Lists.newArrayList();
         items.forEach(item -> ids.add(item.path("id").textValue()));
         return ids;
+    }
+
+    @Test
+    public void testLinkContext() throws Exception {
+        api(adminUser).setLinkContext("link1", Optional.of("vc1"), Optional.empty());
+        JsonNode data = execute("testquery-linkcontext.graphql", Collections.emptyMap());
+        JsonNode c1 = data.path("data").path("c1");
+        Map<String, String> contexts = Maps.newHashMap();
+        c1.path("links").forEach(link ->
+                contexts.put(link.path("id").textValue(), link.path("contextId").textValue()));
+        assertEquals(2, contexts.size());
+        assertEquals("vc1", contexts.get("link1"));
+        assertNull(contexts.get("link2"));
+        assertEquals(1, c1.path("contextLinks").size());
+        assertEquals("link1", c1.path("contextLinks").path(0).path("id").textValue());
+        assertEquals(0, c1.path("otherContextLinks").size());
     }
 
     private JsonNode execute(String queryResource, Map<String, Object> vars) throws Exception {

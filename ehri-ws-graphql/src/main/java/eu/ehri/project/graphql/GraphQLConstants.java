@@ -41,6 +41,7 @@ final class GraphQLConstants {
     static final String ACCESS_POINT_TYPE_PARAM = "accessPointType";
     static final String DIRECTION_PARAM = "direction";
     static final String TYPE_PARAM = "type";
+    static final String CONTEXT_PARAM = "context";
 
     // Connection/edge field names
     static final String HAS_PREVIOUS_PAGE = "hasPreviousPage";

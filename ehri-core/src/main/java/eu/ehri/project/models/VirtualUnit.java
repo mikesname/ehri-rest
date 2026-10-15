@@ -137,6 +137,17 @@ public interface VirtualUnit extends AbstractUnit {
     void removeIncludedUnit(DocumentaryUnit unit);
 
     /**
+     * Fetch links made in the context of this virtual unit.
+     *
+     * NB: these are deliberately not dependent relations, since
+     * dependents not present in an update bundle are deleted.
+     *
+     * @return an iterable of link frames
+     */
+    @Adjacency(label = Ontology.LINK_HAS_CONTEXT, direction = Direction.IN)
+    Iterable<Link> getContextualLinks();
+
+    /**
      * Fetch the author of this virtual unit.
      *
      * @return a user or group frame

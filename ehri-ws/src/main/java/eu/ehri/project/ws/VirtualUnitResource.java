@@ -29,6 +29,7 @@ import eu.ehri.project.definitions.Entities;
 import eu.ehri.project.exceptions.*;
 import eu.ehri.project.models.DocumentaryUnit;
 import eu.ehri.project.models.EntityClass;
+import eu.ehri.project.models.Link;
 import eu.ehri.project.models.UserProfile;
 import eu.ehri.project.models.VirtualUnit;
 import eu.ehri.project.models.base.Accessor;
@@ -83,6 +84,32 @@ public final class VirtualUnitResource extends
                         ? parent.getAllChildren()
                         : parent.getChildren();
                 return getQuery().page(units, cls);
+            });
+            tx.success();
+            return page;
+        }
+    }
+
+    /**
+     * List links made in the context of this virtual unit.
+     *
+     * @param id the virtual unit ID
+     * @return a list of links
+     * @throws ItemNotFound if the virtual unit does not exist
+     */
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("{id:[^/]+}/contextlinks")
+    public Response listContextualLinks(@PathParam("id") String id) throws ItemNotFound {
+        try (final Tx tx = beginTx()) {
+            // Check the virtual unit exists and is accessible...
+            api().getContextualLinks(id);
+            Response page = streamingPage(() -> {
+                try {
+                    return getQuery().page(api().getContextualLinks(id), Link.class);
+                } catch (ItemNotFound e) {
+                    throw new RuntimeException(e);
+                }
             });
             tx.success();
             return page;

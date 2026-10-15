@@ -1,0 +1,14 @@
+query linkContext {
+    c1: DocumentaryUnit(id: "c1") {
+        links {
+            id
+            contextId
+        }
+        contextLinks: links(context: "vc1") {
+            id
+        }
+        otherContextLinks: links(context: "vu1") {
+            id
+        }
+    }
+}

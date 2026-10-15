@@ -936,7 +936,7 @@ public class ImportResource extends AbstractResource {
     /**
      * Create multiple links via CSV or JSON tabular upload.
      * <p>
-     * Each data row must consist of 6 columns:
+     * Each data row must consist of 6 or 7 columns:
      * </p>
      * <ol>
      * <li>the source item ID
@@ -945,6 +945,8 @@ public class ImportResource extends AbstractResource {
      * <li>the link type, e.g. associative, hierarchical
      * <li>the link field (if applicable) e.g. relatedUnitsOfDescription
      * <li>the link description (optional)
+     * <li>the ID of a virtual unit in the context of which the
+     * link is made (optional)
      * </ol>
      * <p>
      * A single log item will be created for the entire CSV.

@@ -20,6 +20,7 @@
 package eu.ehri.project.api.impl;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.frames.FramedGraph;
@@ -27,6 +28,7 @@ import eu.ehri.project.acl.*;
 import eu.ehri.project.api.*;
 import eu.ehri.project.core.GraphManager;
 import eu.ehri.project.core.GraphManagerFactory;
+import eu.ehri.project.definitions.Entities;
 import eu.ehri.project.definitions.EventTypes;
 import eu.ehri.project.definitions.Ontology;
 import eu.ehri.project.exceptions.*;
@@ -38,7 +40,6 @@ import eu.ehri.project.persistence.*;
 import eu.ehri.project.utils.GraphInitializer;
 
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -279,11 +280,27 @@ public class ApiImpl implements Api {
                     accessor.getId(), id, PermissionType.DELETE.getName(), scope.getId());
         }
         helper.checkEntityPermission(item, accessor, PermissionType.DELETE);
-        commitEvent(() -> actionManager
-                .newEventContext(item, accessor.as(Actioner.class),
-                        EventTypes.deletion, logMessage)
-                .createVersion(item));
-        return bundleManager.withScopeIds(scope.idPath())
+
+        // Links made in the context of a virtual unit are deleted
+        // along with it, and versioned as part of the same event.
+        final List<Link> contextualLinks = Entities.VIRTUAL_UNIT.equals(item.getType())
+                ? Lists.newArrayList(item.as(VirtualUnit.class).getContextualLinks())
+                : Collections.emptyList();
+        commitEvent(() -> {
+            ActionManager.EventContext ctx = actionManager
+                    .newEventContext(item, accessor.as(Actioner.class),
+                            EventTypes.deletion, logMessage)
+                    .createVersion(item);
+            for (Link link : contextualLinks) {
+                ctx = ctx.createVersion(link);
+            }
+            return ctx;
+        });
+        int count = 0;
+        for (Link link : contextualLinks) {
+            count += bundleManager.delete(depSerializer.entityToBundle(link));
+        }
+        return count + bundleManager.withScopeIds(scope.idPath())
                 .delete(depSerializer.entityToBundle(item));
     }
 
@@ -399,33 +416,45 @@ public class ApiImpl implements Api {
 
     @Override
     public Iterable<Link> getLinks(String id) {
-        final Predicate<Link> p = link -> {
-            for (Linkable target : link.getLinkTargets()) {
-                if (target.hasAccessRestriction() && !aclManager.canAccess(target, accessor)) {
-                    return false;
-                }
-            }
-            return true;
-        };
+        return getLinks(id, Optional.empty());
+    }
+
+    @Override
+    public Iterable<Link> getLinks(String id, Optional<String> context) {
         final Iterable<Link> links = manager.getEntityUnchecked(id, Linkable.class).getLinks();
-        return Iterables.filter(links, p::test);
+        final Iterable<Link> filtered = Iterables.filter(links, this::canAccessLinkTargets);
+        return context.<Iterable<Link>>map(ctx -> Iterables.filter(filtered, link -> {
+            VirtualUnit linkContext = link.getLinkContext();
+            return linkContext != null && ctx.equals(linkContext.getId());
+        })).orElse(filtered);
+    }
+
+    @Override
+    public Iterable<Link> getContextualLinks(String id) throws ItemNotFound {
+        VirtualUnit context = getTyped(id, EntityClass.VIRTUAL_UNIT, VirtualUnit.class);
+        return Iterables.filter(context.getContextualLinks(), this::canAccessLinkTargets);
     }
 
     @Override
     public Link createLink(String source, String target, List<String> bodies,
-                           Bundle bundle, boolean directional, Collection<Accessor> accessibleTo, Optional<String> logMessage)
+                           Bundle bundle, boolean directional, Optional<String> context,
+                           Collection<Accessor> accessibleTo, Optional<String> logMessage)
             throws ItemNotFound, ValidationError, PermissionDenied {
         Linkable src = manager.getEntity(source, Linkable.class);
         Linkable dst = manager.getEntity(target, Linkable.class);
         helper.checkEntityPermission(src, accessor, PermissionType.ANNOTATE);
         // TODO: Should this require perms to link another item???
         //helper.checkEntityPermission(dst, user, PermissionType.ANNOTATE);
+        final VirtualUnit vu = context.isPresent() ? getLinkContextForUpdate(context.get()) : null;
         Link link = bundleManager.create(bundle, Link.class);
         link.addLinkTarget(src);
         link.addLinkTarget(dst);
         link.setLinker(accessor);
         if (directional) {
             link.setLinkSource(src);
+        }
+        if (vu != null) {
+            link.setLinkContext(vu);
         }
         aclManager.setAccessors(link, accessibleTo);
         if (!AclManager.belongsToAdmin(accessor)) {
@@ -436,10 +465,69 @@ public class ApiImpl implements Api {
             Accessible item = manager.getEntity(body, Accessible.class);
             link.addLinkBody(item);
         }
-        commitEvent(() -> actionManager.newEventContext(
-                link, accessor.as(Actioner.class), EventTypes.link, logMessage)
-                .addSubjects(src).addSubjects(dst));
+        commitEvent(() -> {
+            ActionManager.EventContext ctx = actionManager.newEventContext(
+                    link, accessor.as(Actioner.class), EventTypes.link, logMessage)
+                    .addSubjects(src).addSubjects(dst);
+            return vu != null ? ctx.addSubjects(vu) : ctx;
+        });
         return link;
+    }
+
+    @Override
+    public Link setLinkContext(String id, Optional<String> context, Optional<String> logMessage)
+            throws ItemNotFound, PermissionDenied {
+        Link link = getTyped(id, EntityClass.LINK, Link.class);
+        helper.checkEntityPermission(link, accessor, PermissionType.UPDATE);
+        final VirtualUnit current = link.getLinkContext();
+        final VirtualUnit vu = context.isPresent() ? getLinkContextForUpdate(context.get()) : null;
+        if (Objects.equals(current, vu)) {
+            return link;
+        }
+        commitEvent(() -> {
+            ActionManager.EventContext ctx = actionManager.newEventContext(
+                    link, accessor.as(Actioner.class), EventTypes.modification, logMessage);
+            if (current != null) {
+                ctx = ctx.addSubjects(current);
+            }
+            return vu != null ? ctx.addSubjects(vu) : ctx;
+        });
+        if (vu != null) {
+            link.setLinkContext(vu);
+        } else {
+            link.removeLinkContext(current);
+        }
+        return link;
+    }
+
+    /**
+     * Fetch a virtual unit in the context of which links are being
+     * made, checking that the current user can annotate within it.
+     */
+    private VirtualUnit getLinkContextForUpdate(String id) throws ItemNotFound, PermissionDenied {
+        VirtualUnit vu = getTyped(id, EntityClass.VIRTUAL_UNIT, VirtualUnit.class);
+        helper.checkEntityPermission(vu, accessor, PermissionType.ANNOTATE);
+        return vu;
+    }
+
+    /**
+     * Fetch an accessible item, ensuring it is of the given type.
+     */
+    private <E extends Accessible> E getTyped(String id, EntityClass type, Class<E> cls) throws ItemNotFound {
+        E item = manager.getEntity(id, type, cls);
+        if (!aclManager.canAccess(item, accessor)) {
+            throw new ItemNotFound(id);
+        }
+        return item;
+    }
+
+    private boolean canAccessLinkTargets(Link link) {
+        for (Linkable target : link.getLinkTargets()) {
+            if (target.hasAccessRestriction() && !aclManager.canAccess(target, accessor)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -448,7 +536,7 @@ public class ApiImpl implements Api {
             throws ItemNotFound, ValidationError, PermissionDenied {
         Description description = manager.getEntity(descriptionId, Description.class);
         helper.checkEntityPermission(description.getEntity(), accessor, PermissionType.UPDATE);
-        Link link = createLink(source, target, Collections.emptyList(), bundle, false, accessibleTo, logMessage);
+        Link link = createLink(source, target, Collections.emptyList(), bundle, false, Optional.empty(), accessibleTo, logMessage);
         Bundle relBundle = Bundle.of(EntityClass.ACCESS_POINT)
                 .withDataValue(Ontology.NAME_KEY, bodyName)
                 .withDataValue(Ontology.ACCESS_POINT_TYPE, bodyType)

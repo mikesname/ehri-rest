@@ -26,10 +26,13 @@ import eu.ehri.project.acl.ContentTypes;
 import eu.ehri.project.acl.PermissionType;
 import eu.ehri.project.definitions.EventTypes;
 import eu.ehri.project.definitions.Ontology;
+import eu.ehri.project.exceptions.ItemNotFound;
 import eu.ehri.project.exceptions.PermissionDenied;
 import eu.ehri.project.models.*;
 import eu.ehri.project.models.base.Description;
 import eu.ehri.project.models.base.Linkable;
+import eu.ehri.project.models.events.SystemEvent;
+import eu.ehri.project.models.events.Version;
 import eu.ehri.project.persistence.Bundle;
 import eu.ehri.project.test.AbstractFixtureTest;
 import org.junit.Before;
@@ -37,6 +40,7 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -86,7 +90,7 @@ public class ApiLinkingTest extends AbstractFixtureTest {
         acl.grantPermission(src, PermissionType.ANNOTATE, basicUser);
         Link link = loggingApi(basicUser)
                 .createLink("c1", "a1", Lists.newArrayList("ur1"),
-                        linkBundle, false, Lists.newArrayList(), Optional.empty());
+                        linkBundle, false, Optional.empty(), Lists.newArrayList(), Optional.empty());
         assertEquals(linkDesc, link.getDescription());
         assertTrue(acl.hasPermission(link, PermissionType.OWNER, basicUser));
         assertEquals(2, Iterables.size(link.getLinkTargets()));
@@ -106,7 +110,7 @@ public class ApiLinkingTest extends AbstractFixtureTest {
         Link link = loggingApi(adminUser)
                 .createLink("c1", "a1", Lists.newArrayList("ur1"),
                         getLinkBundle("test", "associative"),
-                        true, Lists.newArrayList(), Optional.empty());
+                        true, Optional.empty(), Lists.newArrayList(), Optional.empty());
         assertEquals(2, Iterables.size(link.getLinkTargets()));
         assertEquals(src, link.getLinkSource());
     }
@@ -115,7 +119,7 @@ public class ApiLinkingTest extends AbstractFixtureTest {
     @Test(expected = PermissionDenied.class)
     public void testCreateLinkWithoutPermission() throws Exception {
         api(basicUser).createLink("c1", "a1", Lists.newArrayList("ur1"),
-                getLinkBundle("won't work!", "too bad!"), false,
+                getLinkBundle("won't work!", "too bad!"), false, Optional.empty(),
                 Lists.newArrayList(), Optional.empty());
     }
 
@@ -158,13 +162,105 @@ public class ApiLinkingTest extends AbstractFixtureTest {
         acl.grantPermission(src, PermissionType.ANNOTATE, basicUser);
         Link link = loggingApi(basicUser)
                 .createLink("c1", "a1", Lists.newArrayList("ur1"),
-                        linkBundle, false, Lists.newArrayList(), Optional.empty());
+                        linkBundle, false, Optional.empty(), Lists.newArrayList(), Optional.empty());
         assertEquals(2, Iterables.size(link.getLinkTargets()));
 
         assertFalse(acl.hasPermission(ContentTypes.LINK, PermissionType.DELETE, basicUser));
         loggingApi(basicUser).delete(link.getId());
         assertEquals(api(basicUser).actionManager()
                 .getLatestGlobalEvent().getEventType(), EventTypes.deletion);
+    }
+
+    @Test
+    public void testCreateLinkInContext() throws Exception {
+        VirtualUnit vc1 = manager.getEntity("vc1", VirtualUnit.class);
+        Link link = loggingApi(adminUser)
+                .createLink("c1", "a1", Lists.newArrayList("ur1"),
+                        getLinkBundle("test", "associative"), false,
+                        Optional.of("vc1"), Lists.newArrayList(), Optional.empty());
+        assertEquals(vc1, link.getLinkContext());
+        assertTrue(Lists.newArrayList(api(adminUser).actionManager()
+                .getLatestGlobalEvent().getSubjects()).contains(vc1));
+
+        assertEquals(Lists.newArrayList(link),
+                Lists.newArrayList(api(adminUser).getContextualLinks("vc1")));
+        assertEquals(Lists.newArrayList(link),
+                Lists.newArrayList(api(adminUser).getLinks("c1", Optional.of("vc1"))));
+        assertEquals(3, Iterables.size(api(adminUser).getLinks("c1")));
+        assertEquals(0, Iterables.size(api(adminUser).getLinks("c1", Optional.of("vu1"))));
+    }
+
+    @Test(expected = PermissionDenied.class)
+    public void testCreateLinkInContextWithoutPermission() throws Exception {
+        // A user who can annotate the source item still needs
+        // permission to annotate within the virtual unit
+        AclManager acl = new AclManager(graph);
+        acl.grantPermission(manager.getEntity("c1", DocumentaryUnit.class),
+                PermissionType.ANNOTATE, basicUser);
+        api(basicUser).createLink("c1", "a1", Lists.newArrayList("ur1"),
+                getLinkBundle("won't work!", "associative"), false, Optional.of("vc1"),
+                Lists.newArrayList(), Optional.empty());
+    }
+
+    @Test(expected = ItemNotFound.class)
+    public void testCreateLinkInBadContext() throws Exception {
+        api(adminUser).createLink("c1", "a1", Lists.newArrayList("ur1"),
+                getLinkBundle("won't work!", "associative"), false, Optional.of("c4"),
+                Lists.newArrayList(), Optional.empty());
+    }
+
+    @Test
+    public void testSetLinkContext() throws Exception {
+        VirtualUnit vc1 = manager.getEntity("vc1", VirtualUnit.class);
+        VirtualUnit vu3 = manager.getEntity("vu3", VirtualUnit.class);
+        Link link = loggingApi(adminUser).setLinkContext("link1", Optional.of("vc1"), Optional.empty());
+        assertEquals(vc1, link.getLinkContext());
+        SystemEvent event = api(adminUser).actionManager().getLatestGlobalEvent();
+        assertEquals(EventTypes.modification, event.getEventType());
+        assertTrue(Lists.newArrayList(event.getSubjects()).contains(vc1));
+        // The link's data is unchanged, so no version is created
+        assertFalse(event.getPriorVersions().iterator().hasNext());
+
+        // Changing the context replaces the existing one
+        loggingApi(adminUser).setLinkContext("link1", Optional.of("vu3"), Optional.empty());
+        assertEquals(vu3, link.getLinkContext());
+        assertEquals(0, Iterables.size(vc1.getContextualLinks()));
+
+        // Setting the same context again is a no-op
+        SystemEvent last = api(adminUser).actionManager().getLatestGlobalEvent();
+        loggingApi(adminUser).setLinkContext("link1", Optional.of("vu3"), Optional.empty());
+        assertEquals(last, api(adminUser).actionManager().getLatestGlobalEvent());
+
+        loggingApi(adminUser).setLinkContext("link1", Optional.empty(), Optional.empty());
+        assertNull(link.getLinkContext());
+        assertEquals(0, Iterables.size(vu3.getContextualLinks()));
+    }
+
+    @Test(expected = PermissionDenied.class)
+    public void testSetLinkContextWithoutPermission() throws Exception {
+        api(basicUser).setLinkContext("link4", Optional.of("vc1"), Optional.empty());
+    }
+
+    @Test
+    public void testDeleteVirtualUnitDeletesContextualLinks() throws Exception {
+        Link link = loggingApi(adminUser)
+                .createLink("c1", "a1", Lists.newArrayList("ur1"),
+                        getLinkBundle("test", "associative"), false,
+                        Optional.of("vu3"), Lists.newArrayList(), Optional.empty());
+        String linkId = link.getId();
+        loggingApi(adminUser).delete("vu3");
+        assertFalse(manager.exists("vu3"));
+        assertFalse(manager.exists(linkId));
+        // The access point body is not deleted with the link
+        assertTrue(manager.exists("ur1"));
+
+        // Both the virtual unit and link are versioned in the deletion event
+        SystemEvent event = api(adminUser).actionManager().getLatestGlobalEvent();
+        assertEquals(EventTypes.deletion, event.getEventType());
+        List<String> versionIds = Lists.newArrayList(event.getPriorVersions()).stream()
+                .map(Version::getEntityId).collect(Collectors.toList());
+        assertTrue(versionIds.contains("vu3"));
+        assertTrue(versionIds.contains(linkId));
     }
 
     private Bundle getLinkBundle(String linkDesc, String linkType) {

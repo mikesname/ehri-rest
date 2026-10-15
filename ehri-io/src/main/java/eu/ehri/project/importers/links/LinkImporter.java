@@ -36,6 +36,7 @@ import eu.ehri.project.importers.PreImportCallback;
 import eu.ehri.project.models.AccessPoint;
 import eu.ehri.project.models.EntityClass;
 import eu.ehri.project.models.Link;
+import eu.ehri.project.models.VirtualUnit;
 import eu.ehri.project.models.base.*;
 import eu.ehri.project.persistence.ActionManager;
 import eu.ehri.project.persistence.Bundle;
@@ -61,6 +62,10 @@ public class LinkImporter {
             "field",
             "description"
     );
+
+    // An optional final column giving the ID of a virtual unit
+    // in the context of which the link is made.
+    private static final String CONTEXT_COLUMN = "context ID";
 
     private final FramedGraph<?> framedGraph;
     private final GraphManager manager;
@@ -174,11 +179,14 @@ public class LinkImporter {
 
     public ImportLog importLinks(Table table, String logMessage) throws DeserializationError {
 
-        if (!table.rows().isEmpty() && table.rows().get(0).size() != COLUMNS.size()) {
-            throw new DeserializationError(
-                    String.format("Input CSV must have 6 columns: %s. " +
-                                    "Leave columns blank where not applicable.",
-                    Joiner.on(", ").join(COLUMNS)));
+        if (!table.rows().isEmpty()) {
+            int numCols = table.rows().get(0).size();
+            if (numCols != COLUMNS.size() && numCols != COLUMNS.size() + 1) {
+                throw new DeserializationError(
+                        String.format("Input CSV must have 6 columns: %s, and optionally a 7th: %s. " +
+                                        "Leave columns blank where not applicable.",
+                                Joiner.on(", ").join(COLUMNS), CONTEXT_COLUMN));
+            }
         }
 
         ImportLog log = new ImportLog(logMessage);
@@ -195,6 +203,7 @@ public class LinkImporter {
             String type = row.get(3);
             String field = row.get(4);
             String desc = row.get(5);
+            String context = row.size() > COLUMNS.size() ? row.get(COLUMNS.size()) : "";
             Bundle.Builder builder = Bundle.Builder.withClass(EntityClass.LINK)
                     .addDataValue(Ontology.LINK_HAS_TYPE, type);
             if (!field.trim().isEmpty()) {
@@ -208,6 +217,9 @@ public class LinkImporter {
             try {
                 Linkable t1 = manager.getEntity(from, Linkable.class);
                 Linkable t2 = manager.getEntity(to, Linkable.class);
+                VirtualUnit vu = context.trim().isEmpty()
+                        ? null
+                        : manager.getEntity(context.trim(), EntityClass.VIRTUAL_UNIT, VirtualUnit.class);
 
                 Bundle processed = callback.preImport(Lists.newArrayList(), bundle);
                 Link link = bundleManager.create(processed, Link.class);
@@ -218,6 +230,10 @@ public class LinkImporter {
                 if (!ap.trim().isEmpty()) {
                     AccessPoint accessPoint = manager.getEntity(ap, AccessPoint.class);
                     link.addLinkBody(accessPoint);
+                }
+
+                if (vu != null) {
+                    link.setLinkContext(vu);
                 }
 
                 eventContext.addSubjects(link);

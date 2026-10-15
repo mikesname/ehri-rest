@@ -38,6 +38,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Provides a web service interface for creating/reading item links.
@@ -49,6 +50,7 @@ public class LinkResource extends AbstractAccessibleResource<Link>
     public static final String TARGET_PARAM = "target";
     public static final String SOURCE_PARAM = "source";
     public static final String BODY_PARAM = "body";
+    public static final String CONTEXT_PARAM = "context";
 
     public LinkResource(@Context GraphDatabaseService database) {
         super(database, Link.class);
@@ -88,6 +90,8 @@ public class LinkResource extends AbstractAccessibleResource<Link>
      * @param target    The link target
      * @param bodies    optional list of entities to provide the body
      * @param accessors The IDs of accessors who can see this link
+     * @param context   optional ID of a virtual unit in the context
+     *                  of which the link is made
      * @return the created link item
      * @throws ItemNotFound         if the item does not exist
      * @throws PermissionDenied     if the user cannot perform the action
@@ -103,7 +107,8 @@ public class LinkResource extends AbstractAccessibleResource<Link>
             @QueryParam(TARGET_PARAM) String target,
             @QueryParam(BODY_PARAM) List<String> bodies,
             @QueryParam(ACCESSOR_PARAM) List<String> accessors,
-            @QueryParam("directional") @DefaultValue("false") boolean directional)
+            @QueryParam("directional") @DefaultValue("false") boolean directional,
+            @QueryParam(CONTEXT_PARAM) String context)
             throws PermissionDenied, ValidationError, DeserializationError, ItemNotFound {
         try (final Tx tx = beginTx()) {
             if (source == null || target == null) {
@@ -112,8 +117,54 @@ public class LinkResource extends AbstractAccessibleResource<Link>
             UserProfile user = getCurrentUser();
             Link link = api().createLink(
                     source, target, bodies, setPid(bundle), directional,
-                    getAccessors(accessors, user), getLogMessage());
+                    Optional.ofNullable(context), getAccessors(accessors, user), getLogMessage());
             Response response = creationResponse(link);
+            tx.success();
+            return response;
+        }
+    }
+
+    /**
+     * Set the virtual unit in the context of which a link
+     * was made, replacing any existing context.
+     *
+     * @param id        the link ID
+     * @param contextId the virtual unit ID
+     * @return the updated link
+     * @throws ItemNotFound         if the link or virtual unit does not exist
+     * @throws PermissionDenied     if the user cannot perform the action
+     * @throws DeserializationError if no virtual unit ID is given
+     */
+    @PUT
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("{id:[^/]+}/context")
+    public Response setContext(@PathParam("id") String id, @QueryParam(ID_PARAM) String contextId)
+            throws PermissionDenied, ItemNotFound, DeserializationError {
+        try (final Tx tx = beginTx()) {
+            if (contextId == null) {
+                throw new DeserializationError("A context ID must be provided");
+            }
+            Response response = single(api().setLinkContext(id, Optional.of(contextId), getLogMessage()));
+            tx.success();
+            return response;
+        }
+    }
+
+    /**
+     * Remove a link's virtual unit context, if it has one.
+     *
+     * @param id the link ID
+     * @return the updated link
+     * @throws ItemNotFound     if the link does not exist
+     * @throws PermissionDenied if the user cannot perform the action
+     */
+    @DELETE
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("{id:[^/]+}/context")
+    public Response removeContext(@PathParam("id") String id)
+            throws PermissionDenied, ItemNotFound {
+        try (final Tx tx = beginTx()) {
+            Response response = single(api().setLinkContext(id, Optional.empty(), getLogMessage()));
             tx.success();
             return response;
         }

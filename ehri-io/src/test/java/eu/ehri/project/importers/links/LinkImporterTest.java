@@ -20,6 +20,7 @@
 package eu.ehri.project.importers.links;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import eu.ehri.project.exceptions.DeserializationError;
 import eu.ehri.project.importers.ImportLog;
@@ -27,6 +28,7 @@ import eu.ehri.project.importers.base.AbstractImporterTest;
 import eu.ehri.project.models.EntityClass;
 import eu.ehri.project.models.Link;
 import eu.ehri.project.models.Repository;
+import eu.ehri.project.models.VirtualUnit;
 import eu.ehri.project.models.base.Accessible;
 import eu.ehri.project.models.base.Linkable;
 import eu.ehri.project.utils.Table;
@@ -81,6 +83,31 @@ public class LinkImporterTest extends AbstractImporterTest {
         ImportLog log = new LinkImporter(graph, adminUser, true, getPidGeneratorCallback())
                 .importLinks(badData, "testing");
         assertEquals(3, log.getCreated());
+    }
+
+    @Test
+    public void importLinksWithContext() throws Exception {
+        Table data = Table.of(ImmutableList.of(
+                ImmutableList.of("r1", "c1", "", "associative", "", "Test", "vc1"),
+                ImmutableList.of("r4", "c4", "", "associative", "", "Test 2", "")
+        ));
+        ImportLog log = new LinkImporter(graph, adminUser, false, getPidGeneratorCallback())
+                .importLinks(data, "testing");
+        assertEquals(2, log.getCreated());
+        VirtualUnit vc1 = manager.getEntity("vc1", VirtualUnit.class);
+        List<Link> contextLinks = Lists.newArrayList(vc1.getContextualLinks());
+        assertEquals(1, contextLinks.size());
+        assertEquals("Test", contextLinks.get(0).getDescription());
+    }
+
+    @Test(expected = DeserializationError.class)
+    public void importLinksWithBadContext() throws Exception {
+        // c4 is not a virtual unit
+        Table data = Table.of(ImmutableList.of(
+                ImmutableList.of("r1", "c1", "", "associative", "", "Test", "c4")
+        ));
+        new LinkImporter(graph, adminUser, false, getPidGeneratorCallback())
+                .importLinks(data, "testing");
     }
 
     @Test

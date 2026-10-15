@@ -290,6 +290,31 @@ public interface Api {
     Iterable<Link> getLinks(String id);
 
     /**
+     * Get an item's links, optionally restricted to those made in
+     * the context of a given virtual unit.
+     * <p>
+     * Links are skipped if their targets are not accessible to the
+     * current user.
+     *
+     * @param id      the target item
+     * @param context the ID of a virtual unit context
+     * @return an iterable of item links
+     */
+    Iterable<Link> getLinks(String id, Optional<String> context);
+
+    /**
+     * Get the links made in the context of a virtual unit.
+     * <p>
+     * Links are skipped if their targets are not accessible to the
+     * current user.
+     *
+     * @param id the virtual unit ID
+     * @return an iterable of links
+     * @throws ItemNotFound if the virtual unit does not exist
+     */
+    Iterable<Link> getContextualLinks(String id) throws ItemNotFound;
+
+    /**
      * Create a link between two items.
      *
      * @param source       the identifier of a Accessible source of this Annotation
@@ -298,6 +323,8 @@ public interface Api {
      * @param bodies       the set of link body items
      * @param accessibleTo users who have exclusive access to this link
      * @param directional  whether the link is directional or not
+     * @param context      the ID of a virtual unit in the context of which
+     *                     the link is made
      * @param logMessage   a log message
      * @return a new link
      * @throws ItemNotFound     if the item does not exist
@@ -309,9 +336,24 @@ public interface Api {
                     List<String> bodies,
                     Bundle bundle,
                     boolean directional,
+                    Optional<String> context,
                     Collection<Accessor> accessibleTo,
                     Optional<String> logMessage) throws ItemNotFound, ValidationError,
             PermissionDenied;
+
+    /**
+     * Set or remove the virtual unit context of an existing link.
+     *
+     * @param id         the link ID
+     * @param context    the ID of a virtual unit, or empty to remove
+     *                   the link's context
+     * @param logMessage a log message
+     * @return the link
+     * @throws ItemNotFound     if the link or virtual unit does not exist
+     * @throws PermissionDenied if the user cannot perform the action
+     */
+    Link setLinkContext(String id, Optional<String> context, Optional<String> logMessage)
+            throws ItemNotFound, PermissionDenied;
 
     /**
      * Create a link between two items, along with an access point on the given description.

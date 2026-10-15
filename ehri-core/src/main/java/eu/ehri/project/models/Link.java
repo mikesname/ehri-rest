@@ -58,6 +58,33 @@ public interface Link extends Promotable, Temporal, Annotatable, PersistentIdent
     void setLinkSource(Linkable entity);
 
     /**
+     * Fetch the virtual unit in the context of which this
+     * link was made, or null if the link has no context.
+     *
+     * @return a virtual unit, or null
+     */
+    @Fetch(value = Ontology.LINK_HAS_CONTEXT, numLevels = 0)
+    @Adjacency(label = Ontology.LINK_HAS_CONTEXT)
+    VirtualUnit getLinkContext();
+
+    /**
+     * Set the virtual unit in the context of which this link
+     * was made, replacing any existing context.
+     *
+     * @param context a virtual unit
+     */
+    @UniqueAdjacency(label = Ontology.LINK_HAS_CONTEXT, single = true)
+    void setLinkContext(VirtualUnit context);
+
+    /**
+     * Remove the given context from this link.
+     *
+     * @param context a virtual unit
+     */
+    @Adjacency(label = Ontology.LINK_HAS_CONTEXT)
+    void removeLinkContext(VirtualUnit context);
+
+    /**
      * Fetch the targets attached to this link.
      *
      * @return an iterable of linkable items
